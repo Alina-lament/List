@@ -24,7 +24,7 @@ const REMINDER_OPTIONS = [
   { value: '1440', label: '提前 1 天' },
 ]
 
-type PanelKind = 'date' | 'priority' | 'more'
+type PanelKind = 'date' | 'priority' | 'more' | 'breadcrumb'
 
 function FlagIcon({ priority, size = 16 }: { priority: number; size?: number }) {
   const color = PRIORITY_COLORS[priority]
@@ -336,7 +336,7 @@ export function TaskDetailPanel() {
         </div>
       </div>
 
-      {/* ====== 主任务（父任务） ====== */}
+      {/* ====== 主任务（父任务）/ 清单切换 ====== */}
       <div className="mt-4 px-5">
         {parentTask ? (
           <button
@@ -349,12 +349,38 @@ export function TaskDetailPanel() {
             </svg>
           </button>
         ) : (
-          <span className="flex max-w-full items-center gap-0.5 text-[13px] text-ink-3">
-            <span className="truncate" style={{ maxWidth: detailWidth - 100 }}>{listName}</span>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0">
-              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          <div className="relative">
+            <button
+              onClick={() => togglePanel('breadcrumb')}
+              className="flex max-w-full items-center gap-0.5 text-[13px] text-ink-3 transition-colors hover:text-royal"
+            >
+              <span className="truncate" style={{ maxWidth: detailWidth - 100 }}>{listName}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 opacity-50">
+                <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {panel === 'breadcrumb' && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                <div className="max-h-48 overflow-y-auto">
+                  {lists.map((l) => (
+                    <button
+                      key={l.id}
+                      onClick={() => {
+                        void commit({ list_id: l.id })
+                        setPanel(null)
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
+                        l.id === task.list_id ? 'font-medium text-royal' : 'text-ink-2'
+                      }`}
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
+                      <span className="truncate">{l.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

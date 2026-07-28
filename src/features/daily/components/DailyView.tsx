@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { DailyRoutine } from '@shared/types'
 import { Button } from '@/components/ui/Button'
 import { useDailyStore } from '../store'
@@ -8,14 +8,10 @@ import { DailyRoutineEditor } from './DailyRoutineEditor'
 import { todayKey } from '@/lib/date-utils'
 
 export function DailyView() {
-  const { routines, completions, loading, init, increment, decrement } = useDailyStore()
+  const { routines, completions, loading, increment, decrement } = useDailyStore()
   const { lists } = useTasksStore()
   const [editing, setEditing] = useState<DailyRoutine | null>(null)
   const [showCreate, setShowCreate] = useState(false)
-
-  useEffect(() => {
-    void init()
-  }, [])
 
   const today = todayKey()
 

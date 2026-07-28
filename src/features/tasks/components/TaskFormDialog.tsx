@@ -167,26 +167,26 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
     <Dialog open={open} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-card-xl ring-1 ring-ink/5">
+        <DialogPanel className="relative w-full max-w-2xl overflow-visible rounded-2xl bg-white shadow-card-xl ring-1 ring-ink/5">
           {(panel || timePanel) && <div className="fixed inset-0 z-10" onClick={() => { setPanel(null); setTimePanel(null) }} />}
 
           {/* ====== 标题栏 ====== */}
-          <div className="flex items-center justify-between border-b border-canvas-3 px-5 py-4">
-            <DialogTitle className="text-base font-bold text-ink">
+          <div className="flex items-center justify-between border-b border-canvas-3 px-6 py-5">
+            <DialogTitle className="text-xl font-bold text-ink">
               {task ? '编辑任务' : '新建任务'}
             </DialogTitle>
             <button
               onClick={onClose}
-              className="rounded-lg p-1 text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink"
+              className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink"
               aria-label="关闭"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M6 6l12 12M18 6l-12 12" strokeLinecap="round" />
               </svg>
             </button>
           </div>
 
-          <div className="px-5 py-4">
+          <div className="px-6 py-5 pb-10">
             {/* ====== 顶部：完成按钮 + 日期 + 优先级（对齐 TaskDetailPanel 风格） ====== */}
             <div className="mb-4 flex items-center gap-3">
               {/* 编辑模式下显示完成按钮 */}
@@ -354,11 +354,34 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
             </div>
 
             {/* ====== 清单路径 ====== */}
-            <div className="mb-1 flex items-center gap-0.5 text-[13px] text-ink-3">
-              <span>{listName}</span>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0">
-                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div className="relative mb-1">
+              <button
+                onClick={() => setPanel(panel === 'list' ? null : 'list')}
+                className="flex items-center gap-0.5 text-sm text-ink-3 transition-colors hover:text-royal"
+              >
+                <span>{listName}</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0 opacity-50">
+                  <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {panel === 'list' && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                  <div className="max-h-48 overflow-y-auto">
+                    {lists.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setListId(l.id); setPanel(null); }}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
+                          l.id === listId ? 'font-medium text-royal' : 'text-ink-2'
+                        }`}
+                      >
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
+                        <span className="truncate">{l.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ====== 任务标题 ====== */}
@@ -366,7 +389,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className={`w-full bg-transparent text-lg font-bold text-ink placeholder:text-ink-4 focus:outline-none ${
+              className={`w-full bg-transparent text-2xl font-bold text-ink placeholder:text-ink-4 focus:outline-none ${
                 completed ? 'text-ink-4 line-through' : ''
               }`}
               placeholder="任务名称"
@@ -378,7 +401,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="添加描述…"
-              className="mt-3 h-[100px] w-full resize-none bg-transparent text-sm leading-relaxed text-ink-2 placeholder:text-ink-4 focus:outline-none"
+              className="mt-4 h-[180px] w-full resize-none bg-transparent text-base leading-relaxed text-ink-2 placeholder:text-ink-4 focus:outline-none"
             />
           </div>
 
@@ -400,19 +423,6 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
 
             {panel === 'more' && (
               <div className="absolute bottom-full right-0 z-20 mb-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
-                {/* 切换清单 */}
-                <button
-                  onClick={() => { setPanel('list'); }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-3">
-                    <rect x="3" y="3" width="18" height="18" rx="3" />
-                    <path d="M8 10h8M8 14h5" strokeLinecap="round" />
-                  </svg>
-                  <span className="truncate">{listName}</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto shrink-0 text-ink-3"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
-
                 {/* 提醒 */}
                 <button
                   onClick={() => { setPanel('reminder'); }}
@@ -449,26 +459,6 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
                       删除
                     </button>
                   )}
-                </div>
-              </div>
-            )}
-
-            {/* 清单选择子面板 */}
-            {panel === 'list' && (
-              <div className="absolute bottom-full right-0 z-20 mb-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
-                <div className="max-h-48 overflow-y-auto">
-                  {lists.map((l) => (
-                    <button
-                      key={l.id}
-                      onClick={() => { setListId(l.id); setPanel('more'); }}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
-                        l.id === listId ? 'font-medium text-royal' : 'text-ink-2'
-                      }`}
-                    >
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
-                      <span className="truncate">{l.name}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
             )}
