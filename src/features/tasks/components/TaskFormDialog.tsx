@@ -24,7 +24,7 @@ const REMINDER_OPTIONS = [
   { value: '1440', label: '提前 1 天' },
 ]
 
-type PanelKind = 'date' | 'priority' | 'list' | 'more' | null
+type PanelKind = 'date' | 'priority' | 'more' | 'list' | 'reminder' | null
 
 function FlagIcon({ priority, size = 16 }: { priority: number; size?: number }) {
   const color = PRIORITY_COLORS[priority]
@@ -167,7 +167,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
     <Dialog open={open} onClose={onClose} className="relative z-50">
       <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
-        <DialogPanel className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-card-xl ring-1 ring-ink/5">
+        <DialogPanel className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-card-xl ring-1 ring-ink/5">
           {(panel || timePanel) && <div className="fixed inset-0 z-10" onClick={() => { setPanel(null); setTimePanel(null) }} />}
 
           {/* ====== 标题栏 ====== */}
@@ -382,27 +382,86 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
             />
           </div>
 
-          {/* ====== 底部栏：所属清单 + 更多设置 + 操作按钮 ====== */}
-          <div className="flex items-center justify-between border-t border-canvas-3 px-5 py-3">
-            <div className="relative">
-              <button
-                onClick={() => setPanel(panel === 'list' ? null : 'list')}
-                className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[13px] text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink-2"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-                  <rect x="3" y="3" width="18" height="18" rx="3" />
-                  <path d="M8 10h8M8 14h5" strokeLinecap="round" />
-                </svg>
-                <span className="truncate max-w-24">{listName}</span>
-              </button>
+          {/* ====== 右下角：更多操作（三个点） ====== */}
+          <div className="absolute bottom-3 right-3 z-20">
+            <button
+              onClick={() => setPanel(panel === 'more' ? null : 'more')}
+              aria-label="更多设置"
+              className={`rounded-lg p-1.5 transition-colors hover:bg-canvas-2 ${
+                reminder || recurrence.rrule || tagIds.length > 0 ? 'text-royal' : 'text-ink-3'
+              }`}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="19" cy="12" r="1.8" />
+              </svg>
+            </button>
 
-              {panel === 'list' && (
-                <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-44 overflow-y-auto rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+            {panel === 'more' && (
+              <div className="absolute bottom-full right-0 z-20 mb-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                {/* 切换清单 */}
+                <button
+                  onClick={() => { setPanel('list'); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-3">
+                    <rect x="3" y="3" width="18" height="18" rx="3" />
+                    <path d="M8 10h8M8 14h5" strokeLinecap="round" />
+                  </svg>
+                  <span className="truncate">{listName}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto shrink-0 text-ink-3"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+
+                {/* 提醒 */}
+                <button
+                  onClick={() => { setPanel('reminder'); }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-3">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {REMINDER_OPTIONS.find(o => o.value === reminder)?.label ?? '提醒'}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto shrink-0 text-ink-3"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+
+                {/* 分隔线 + 保存 / 删除 */}
+                <div className="mt-0.5 border-t border-canvas-3 pt-0.5">
+                  <button
+                    onClick={() => { setPanel(null); handleSave(); }}
+                    disabled={!title.trim() || !listId}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-medium text-royal transition-colors hover:bg-royal-50 disabled:opacity-40"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <path d="M17 21v-8H7v8M7 3v5h8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {task ? '保存' : '创建'}
+                  </button>
+                  {task && (
+                    <button
+                      onClick={() => { setPanel(null); handleDelete(); }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-medium text-prihigh transition-colors hover:bg-red-50"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      删除
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 清单选择子面板 */}
+            {panel === 'list' && (
+              <div className="absolute bottom-full right-0 z-20 mb-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                <div className="max-h-48 overflow-y-auto">
                   {lists.map((l) => (
                     <button
                       key={l.id}
-                      onClick={() => { setListId(l.id); setPanel(null) }}
-                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                      onClick={() => { setListId(l.id); setPanel('more'); }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
                         l.id === listId ? 'font-medium text-royal' : 'text-ink-2'
                       }`}
                     >
@@ -411,107 +470,25 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
                     </button>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="relative">
-              <button
-                onClick={() => setPanel(panel === 'more' ? null : 'more')}
-                aria-label="更多设置"
-                className={`rounded-lg p-1 transition-colors hover:bg-canvas-2 ${
-                  reminder || recurrence.rrule || tagIds.length > 0 ? 'text-royal' : 'text-ink-3'
-                }`}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="5" cy="12" r="1.8" />
-                  <circle cx="12" cy="12" r="1.8" />
-                  <circle cx="19" cy="12" r="1.8" />
-                </svg>
-              </button>
-
-              {panel === 'more' && (
-                <div className="absolute bottom-full right-0 z-20 mb-1 w-72 rounded-xl border border-canvas-3 bg-white p-4 shadow-card-xl">
-                  <div className="space-y-3">
-                    {/* 提醒 */}
-                    <div>
-                      <label className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">提醒</label>
-                      <select
-                        value={reminder}
-                        onChange={(e) => setReminder(e.target.value)}
-                        className="w-full rounded-xl border border-canvas-3 bg-canvas px-3 py-2 text-sm text-ink transition-all duration-150 hover:border-canvas-4 focus:border-royal focus:outline-none focus:ring-3 focus:ring-royal-50/50"
-                      >
-                        {REMINDER_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* 重复 */}
-                    <div>
-                      <span className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">重复</span>
-                      <RecurrenceRuleEditor
-                        key={task?.id ?? 'new'}
-                        value={recurrence}
-                        onChange={setRecurrence}
-                        startDate={dueDate || null}
-                      />
-                    </div>
-
-                    {/* 标签 */}
-                    {tags.length > 0 && (
-                      <div>
-                        <span className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">标签</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((tag) => {
-                            const active = tagIds.includes(tag.id)
-                            return (
-                              <button
-                                key={tag.id}
-                                type="button"
-                                onClick={() =>
-                                  setTagIds((ids) =>
-                                    active ? ids.filter((x) => x !== tag.id) : [...ids, tag.id],
-                                  )
-                                }
-                                className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-150 ${
-                                  active ? 'border-transparent text-white shadow-sm' : 'hover:bg-canvas-2'
-                                }`}
-                                style={
-                                  active
-                                    ? { backgroundColor: tag.color }
-                                    : { borderColor: tag.color, color: tag.color }
-                                }
-                              >
-                                {tag.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 操作按钮 */}
-            <div className="flex items-center gap-2">
-              {task && (
-                <button
-                  onClick={handleDelete}
-                  className="rounded-xl px-3 py-2 text-sm font-medium text-prihigh transition-all duration-150 hover:bg-red-50"
-                >
-                  删除
-                </button>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={!title.trim() || !listId}
-                className="rounded-xl bg-royal px-4 py-2 text-sm font-semibold text-white transition-all duration-150 hover:bg-royal-dark disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {task ? '保存' : '创建'}
-              </button>
-            </div>
+            {/* 提醒选择子面板 */}
+            {panel === 'reminder' && (
+              <div className="absolute bottom-full right-0 z-20 mb-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                {REMINDER_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => { setReminder(o.value); setPanel('more'); }}
+                    className={`flex w-full items-center px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
+                      reminder === o.value ? 'font-medium text-royal' : 'text-ink-2'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </DialogPanel>
       </div>

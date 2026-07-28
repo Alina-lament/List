@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTasksStore, type ViewMode } from '@/features/tasks/store'
+import { useSettingsStore } from '@/features/settings/store'
 import { ColorPicker } from '@/components/ui/ColorPicker'
 import { SettingsDialog } from '@/features/settings/components/SettingsDialog'
 import { useLayoutStore } from './layoutStore'
+import { api } from '@/lib/api'
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
   {
@@ -22,6 +24,17 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="4" width="18" height="18" rx="2" />
         <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'daily',
+    label: '每日',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+        <rect x="9" y="3" width="6" height="4" rx="1" />
+        <path d="M9 14l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -52,6 +65,28 @@ export function Sidebar() {
   const [showSettings, setShowSettings] = useState(false)
   const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
   const narrow = sidebarWidth < 210
+  const { brandName, brandImageUrl, setBrandName, setBrandImage, clearBrandImage } = useSettingsStore()
+  const [editingBrand, setEditingBrand] = useState(false)
+  const [brandDraft, setBrandDraft] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleBrandImageClick() {
+    const path = await api.openImageFileDialog()
+    if (path) await setBrandImage(path)
+  }
+
+  function startEditingBrand() {
+    setBrandDraft(brandName)
+    setEditingBrand(true)
+  }
+
+  function commitBrand() {
+    const name = brandDraft.trim()
+    if (name && name !== brandName) {
+      void setBrandName(name)
+    }
+    setEditingBrand(false)
+  }
 
   async function submitNewList() {
     const name = newListName.trim()
@@ -82,10 +117,46 @@ export function Sidebar() {
     >
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 py-4">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white shadow-xs">
-          Y
-        </span>
-        {!narrow && <span className="truncate text-base font-bold tracking-tight text-ink">YoungLife</span>}
+        {/* 品牌图片：可点击更换 */}
+        <button
+          onClick={handleBrandImageClick}
+          onContextMenu={(e) => { e.preventDefault(); void clearBrandImage() }}
+          className="group relative h-9 w-9 shrink-0 overflow-hidden rounded-xl shadow-xs transition-shadow hover:shadow-card"
+          title="点击更换图片 / 右键清除"
+        >
+          {brandImageUrl ? (
+            <img src={brandImageUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white">
+              {brandName.charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+            更换
+          </span>
+        </button>
+
+        {/* 品牌名称：可点击编辑 */}
+        {!narrow && (
+          editingBrand ? (
+            <input
+              value={brandDraft}
+              onChange={(e) => setBrandDraft(e.target.value)}
+              onBlur={commitBrand}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitBrand(); if (e.key === 'Escape') setEditingBrand(false) }}
+              className="min-w-0 flex-1 bg-transparent text-base font-bold text-ink outline-none"
+              autoFocus
+            />
+          ) : (
+            <span
+              onClick={startEditingBrand}
+              className="cursor-pointer truncate text-base font-bold tracking-tight text-ink hover:text-royal transition-colors"
+              title="点击编辑名称"
+            >
+              {brandName}
+            </span>
+          )
+        )}
       </div>
 
       {/* 视图切换 */}

@@ -40,6 +40,20 @@ export const IpcChannels = {
   bgSetImage: 'bg:setImage',
   bgGetImagePath: 'bg:getImagePath',
   bgClearImage: 'bg:clearImage',
+
+  // brand
+  brandSetImage: 'brand:setImage',
+  brandGetDataUrl: 'brand:getDataUrl',
+  brandClearImage: 'brand:clearImage',
+
+  // daily routines
+  dailyGetAll: 'daily:getAll',
+  dailyCreate: 'daily:create',
+  dailyUpdate: 'daily:update',
+  dailyDelete: 'daily:delete',
+  dailyGetCompletions: 'daily:getCompletions',
+  dailyIncrement: 'daily:increment',
+  dailyDecrement: 'daily:decrement',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

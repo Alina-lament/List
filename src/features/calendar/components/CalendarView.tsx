@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Task } from '@shared/types'
 import type { CalendarTaskInstance } from '@/types/calendar'
 import { api } from '@/lib/api'
@@ -6,6 +6,7 @@ import { formatMonthTitle, getMonthGrid, getISOWeekNumber, gridToWeeks, isCurren
 import { Button } from '@/components/ui/Button'
 import { useCalendarStore } from '../store'
 import { useSettingsStore } from '@/features/settings/store'
+import { useDailyStore } from '@/features/daily/store'
 import { CalendarCell } from './CalendarCell'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 import { TaskFormDialog } from '@/features/tasks/components/TaskFormDialog'
@@ -21,6 +22,7 @@ type DialogState =
 export function CalendarView() {
   const { year, month, instancesByDate, loading, shiftMonth, goToday, fetchMonth } =
     useCalendarStore()
+  const { routines: dailyRoutines, completions: dailyCompletions } = useDailyStore()
   const [dialog, setDialog] = useState<DialogState>(null)
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
   const [weekCount, setWeekCount] = useState<1 | 2 | 4>(4)
@@ -39,15 +41,40 @@ export function CalendarView() {
   const grid = getMonthGrid(year, month)
   const weeks = gridToWeeks(grid)
 
+  // 预计算每天活跃的每日任务
+  const dailyByDate = useMemo(() => {
+    const map: Record<string, { routine: typeof dailyRoutines[0]; item: { id: string; title: string; target_count: number } }[]> = {}
+    if (dailyRoutines.length === 0) return map
+    for (const date of grid) {
+      const dayOfWeek = new Date(
+        parseInt(date.slice(0, 4)), parseInt(date.slice(5, 7)) - 1, parseInt(date.slice(8, 10)),
+      ).getDay()
+      const entries: typeof map[string] = []
+      for (const r of dailyRoutines) {
+        if (!r.active) continue
+        const days = JSON.parse(r.days_of_week || '[]') as number[]
+        if (days.length > 0 && !days.includes(dayOfWeek)) continue
+        const items = r.items.length > 0 ? r.items : [{ id: r.id, title: r.title, target_count: r.target_count }]
+        for (const item of items) {
+          entries.push({ routine: r, item })
+        }
+      }
+      map[date] = entries
+    }
+    return map
+  }, [grid, dailyRoutines])
+
   // 过滤掉完全不包含当前月份的周（首尾可能全部是其他月份）
   const visibleWeeks = weeks.filter((w) =>
     w.some((d) => isCurrentMonth(d, year, month)),
   )
 
-  // 找到包含今天的周索引，没有则从第 0 周开始
+  // 找到包含今天的周索引，确保至少显示 weekCount 周
   const todayKey = new Date().toISOString().slice(0, 10)
   const todayWeekIdx = visibleWeeks.findIndex((w) => w.includes(todayKey))
-  const startIdx = todayWeekIdx >= 0 ? todayWeekIdx : 0
+  const rawStart = todayWeekIdx >= 0 ? todayWeekIdx : 0
+  // 从后往前挪，保证至少有 weekCount 周可显示
+  const startIdx = Math.max(0, Math.min(rawStart, visibleWeeks.length - weekCount))
   const displayWeeks = visibleWeeks.slice(startIdx, startIdx + weekCount)
 
   // 选中周的 7 天
@@ -168,6 +195,8 @@ export function CalendarView() {
                   year={year}
                   month={month}
                   instances={instancesByDate[date] ?? []}
+                  dailyEntries={dailyByDate[date] ?? []}
+                  dailyCompletions={dailyCompletions}
                   onToggleInstance={handleToggle}
                   onEditInstance={handleEdit}
                   onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
@@ -187,6 +216,8 @@ export function CalendarView() {
         <WeekDetail
           weekDays={selectedWeekDays}
           instancesByDate={instancesByDate}
+          dailyByDate={dailyByDate}
+          dailyCompletions={dailyCompletions}
           onToggleInstance={handleToggle}
           onEditInstance={handleEdit}
           onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
@@ -207,12 +238,16 @@ export function CalendarView() {
 function WeekDetail({
   weekDays,
   instancesByDate,
+  dailyByDate,
+  dailyCompletions,
   onToggleInstance,
   onEditInstance,
   onCreateAt,
 }: {
   weekDays: string[]
   instancesByDate: Record<string, CalendarTaskInstance[]>
+  dailyByDate: Record<string, { routine: import('@shared/types').DailyRoutine; item: { id: string; title: string; target_count: number } }[]>
+  dailyCompletions: import('@shared/types').DailyCompletion[]
   onToggleInstance: (instance: CalendarTaskInstance) => void
   onEditInstance: (instance: CalendarTaskInstance) => void
   onCreateAt: (date: string) => void
@@ -270,6 +305,29 @@ function WeekDetail({
                     />
                   ))
                 )}
+                {/* 每日任务 */}
+                {(() => {
+                  const entries = dailyByDate[date] ?? []
+                  if (entries.length === 0) return null
+                  return (
+                    <div className="mt-2 border-t border-canvas-3 pt-1">
+                      {entries.map(({ routine: r, item }) => {
+                        const comp = dailyCompletions.find(
+                          (c) => c.routine_id === r.id && c.date === date && (r.items.length > 0 ? c.item_id === item.id : !c.item_id),
+                        )
+                        const c = comp?.count ?? 0
+                        const done = c >= item.target_count
+                        return (
+                          <div key={`${r.id}-${item.id}`} className={`flex items-center gap-1 px-1 py-0.5 text-[10px] ${done ? 'text-ink-4 line-through' : 'text-ink-2'}`}>
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-sm ${done ? 'bg-emerald-400' : c > 0 ? 'bg-amber-300' : 'bg-canvas-3'}`} />
+                            <span className="truncate">{item.title}</span>
+                            <span className="shrink-0 text-ink-4">{c}/{item.target_count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Api } from '@shared/api'
 import { IpcChannels } from '@shared/ipc'
-import type { CreateExceptionInput, CreateTaskInput, UpdateTaskInput } from '@shared/types'
+import type { CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
 
 const api: Api = {
   getTasksByDateRange: (start, end) =>
@@ -53,6 +53,24 @@ const api: Api = {
   setBgImage: (filePath) => ipcRenderer.invoke(IpcChannels.bgSetImage, filePath),
   getBgImagePath: () => ipcRenderer.invoke(IpcChannels.bgGetImagePath),
   clearBgImage: () => ipcRenderer.invoke(IpcChannels.bgClearImage),
+
+  // Brand
+  setBrandImage: (filePath) => ipcRenderer.invoke(IpcChannels.brandSetImage, filePath),
+  getBrandDataUrl: () => ipcRenderer.invoke(IpcChannels.brandGetDataUrl),
+  clearBrandImage: () => ipcRenderer.invoke(IpcChannels.brandClearImage),
+
+  // Daily routines
+  getDailyRoutines: () => ipcRenderer.invoke(IpcChannels.dailyGetAll),
+  createDailyRoutine: (input: CreateDailyRoutineInput) =>
+    ipcRenderer.invoke(IpcChannels.dailyCreate, input),
+  updateDailyRoutine: (id, patch: UpdateDailyRoutineInput) =>
+    ipcRenderer.invoke(IpcChannels.dailyUpdate, id, patch),
+  deleteDailyRoutine: (id) => ipcRenderer.invoke(IpcChannels.dailyDelete, id),
+  getDailyCompletions: (date) => ipcRenderer.invoke(IpcChannels.dailyGetCompletions, date),
+  incrementDailyCompletion: (routineId, date, itemId) =>
+    ipcRenderer.invoke(IpcChannels.dailyIncrement, routineId, date, itemId),
+  decrementDailyCompletion: (routineId, date, itemId) =>
+    ipcRenderer.invoke(IpcChannels.dailyDecrement, routineId, date, itemId),
 }
 
 contextBridge.exposeInMainWorld('api', api)

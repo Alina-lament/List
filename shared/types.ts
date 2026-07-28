@@ -119,6 +119,61 @@ export interface SettingsRow {
   updated_at: string
 }
 
+// ── Daily Routines ──
+export interface DailyRoutine {
+  id: string
+  title: string
+  description: string
+  target_count: number
+  list_id: string
+  priority: 0 | 1 | 2 | 3
+  active: 0 | 1
+  days_of_week: string // JSON array, e.g. "[1,2,3,4,5]" for weekdays; "[]" = every day
+  sort_order: number
+  created_at: string
+  updated_at: string
+  items: DailyRoutineItem[]
+}
+
+export interface DailyCompletion {
+  id: string
+  routine_id: string
+  item_id: string | null  // null = 直属于routine（无子项时）
+  date: string // YYYY-MM-DD
+  count: number
+}
+
+export interface DailyRoutineItem {
+  id: string
+  routine_id: string
+  title: string
+  target_count: number
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateDailyRoutineInput {
+  title: string
+  description?: string
+  target_count?: number
+  list_id: string
+  priority?: 0 | 1 | 2 | 3
+  days_of_week?: string
+  items?: { title: string; target_count: number }[]
+}
+
+export interface UpdateDailyRoutineInput {
+  title?: string
+  description?: string
+  target_count?: number
+  list_id?: string
+  priority?: 0 | 1 | 2 | 3
+  active?: 0 | 1
+  days_of_week?: string
+  items?: { title: string; target_count: number }[]
+}
+
 export const DEFAULT_SETTINGS: Record<string, string> = {
   sidebarBg: '#f4f5f7',
   canvasBg: '#fdfdfc',
@@ -139,6 +194,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   bgBlur: '0',
   bgScale: 'cover',
   appIconPath: '',
+  brandName: 'YoungLife',
+  brandImagePath: '',
   sidebarWidth: '240',
   detailWidth: '384',
   scrollSensitivity: '200',

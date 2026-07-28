@@ -8,6 +8,8 @@ import { TaskDetailPanel } from './TaskDetailPanel'
 import { ResizeHandle } from '@/components/layout/ResizeHandle'
 import { DETAIL_WIDTH, useLayoutStore } from '@/components/layout/layoutStore'
 import { todayKey, pad2 } from '@/lib/date-utils'
+import { useDailyStore } from '@/features/daily/store'
+import { DailyTaskCard } from '@/features/daily/components/DailyTaskCard'
 import dayjs from 'dayjs'
 
 export function TaskListView() {
@@ -34,6 +36,12 @@ export function TaskListView() {
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const { detailWidth, setDetailWidth, saveDetailWidth } = useLayoutStore()
+  const {
+    routines: dailyRoutines,
+    completions: dailyCompletions,
+    increment: dailyIncrement,
+    decrement: dailyDecrement,
+  } = useDailyStore()
 
   // 「今日」视图：selectedListId 为 null 时跨全部清单，选中具体清单时仅显示该清单
   const isAllView = selectedListId === null
@@ -424,6 +432,36 @@ export function TaskListView() {
               </div>
             </div>
           )}
+
+          {/* 每日任务区域 */}
+          {(() => {
+            const today = todayKey()
+            const todayDow = new Date().getDay()
+            const todaysDaily = dailyRoutines.filter((r) => {
+              if (!r.active) return false
+              const days = JSON.parse(r.days_of_week || '[]') as number[]
+              if (days.length === 0) return true
+              return days.includes(todayDow)
+            })
+            if (todaysDaily.length === 0) return null
+            return (
+              <div className="mt-6 border-t border-canvas-3 pt-4">
+                <h3 className="mb-3 text-[11px] font-semibold tracking-wide text-ink-3 uppercase">每日打卡</h3>
+                <div className="space-y-2">
+                  {todaysDaily.map((routine) => (
+                    <DailyTaskCard
+                      key={routine.id}
+                      routine={routine}
+                      completions={dailyCompletions}
+                      onCheck={(id, itemId) => void dailyIncrement(id, itemId)}
+                      onUncheck={(id, itemId) => void dailyDecrement(id, itemId)}
+                      onEdit={() => {}}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </div>
 

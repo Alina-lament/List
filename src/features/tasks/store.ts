@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
 
-export type ViewMode = 'list' | 'calendar'
+export type ViewMode = 'list' | 'calendar' | 'daily'
 
 interface TasksState {
   lists: List[]

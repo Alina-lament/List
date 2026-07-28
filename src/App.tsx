@@ -16,8 +16,10 @@ import { api } from '@/lib/api'
 import { AppShell } from '@/components/layout/AppShell'
 import { TaskListView } from '@/features/tasks/components/TaskListView'
 import { CalendarView } from '@/features/calendar/components/CalendarView'
+import { DailyView } from '@/features/daily/components/DailyView'
 import { useTasksStore } from '@/features/tasks/store'
 import { useCalendarStore } from '@/features/calendar/store'
+import { useDailyStore } from '@/features/daily/store'
 import { ReminderToastHost } from '@/features/reminders/ReminderToastHost'
 
 type ActiveDrag =
@@ -27,11 +29,13 @@ type ActiveDrag =
 
 export default function App() {
   const { init, view, error, clearError } = useTasksStore()
+  const initDaily = useDailyStore((s) => s.init)
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
     void init()
+    void initDaily()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -117,7 +121,7 @@ export default function App() {
       onDragEnd={(e) => void handleDragEnd(e)}
       onDragCancel={() => setActiveDrag(null)}
     >
-      <AppShell>{view === 'list' ? <TaskListView /> : <CalendarView />}</AppShell>
+      <AppShell>{view === 'list' ? <TaskListView /> : view === 'calendar' ? <CalendarView /> : <DailyView />}</AppShell>
       <ReminderToastHost />
 
       <DragOverlay>

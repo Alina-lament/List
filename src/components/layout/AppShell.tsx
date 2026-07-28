@@ -15,7 +15,7 @@ const PRIORITY_SHORTCUTS: Record<string, number> = {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { lists, selectedTaskId, tasksByList, updateTask } = useTasksStore()
+  const { lists, selectedTaskId, tasksByList, view, updateTask } = useTasksStore()
   const { sidebarWidth, setSidebarWidth, saveSidebarWidth, init: initLayout } = useLayoutStore()
   const [showCreate, setShowCreate] = useState(false)
 
@@ -56,12 +56,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         onCommit={(w) => void saveSidebarWidth(w)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
-        {/* 顶栏：右侧新建任务 */}
-        <div className="flex items-center justify-end border-b border-canvas-3 bg-canvas backdrop-blur-sm px-6 py-3">
-          <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
-            + 新建任务
-          </Button>
-        </div>
+        {/* 顶栏：右侧新建任务（每日视图有自己的新建按钮，不显示此按钮） */}
+        {view !== 'daily' && (
+          <div className="flex items-center justify-end border-b border-canvas-3 bg-canvas backdrop-blur-sm px-6 py-3">
+            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
+              + 新建任务
+            </Button>
+          </div>
+        )}
         <div className="min-h-0 flex-1">{children}</div>
       </main>
 

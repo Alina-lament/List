@@ -102,6 +102,52 @@ const MIGRATIONS: { version: number; sql: string }[] = [
         ('appIconPath', '',        datetime('now'));
     `,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE daily_routines (
+        id            TEXT PRIMARY KEY,
+        title         TEXT NOT NULL,
+        description   TEXT DEFAULT '',
+        target_count  INTEGER DEFAULT 1,
+        list_id       TEXT NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
+        priority      INTEGER DEFAULT 0,
+        active        INTEGER DEFAULT 1,
+        days_of_week  TEXT DEFAULT '[]',
+        sort_order    INTEGER DEFAULT 0,
+        created_at    TEXT NOT NULL,
+        updated_at    TEXT NOT NULL
+      );
+
+      CREATE TABLE daily_completions (
+        id         TEXT PRIMARY KEY,
+        routine_id TEXT NOT NULL REFERENCES daily_routines(id) ON DELETE CASCADE,
+        date       TEXT NOT NULL,
+        count      INTEGER DEFAULT 0,
+        UNIQUE(routine_id, date)
+      );
+
+      CREATE INDEX idx_daily_completions_date ON daily_completions(date);
+    `,
+  },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE daily_routine_items (
+        id           TEXT PRIMARY KEY,
+        routine_id   TEXT NOT NULL REFERENCES daily_routines(id) ON DELETE CASCADE,
+        title        TEXT NOT NULL,
+        target_count INTEGER DEFAULT 1,
+        sort_order   INTEGER DEFAULT 0,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL
+      );
+
+      ALTER TABLE daily_completions ADD COLUMN item_id TEXT REFERENCES daily_routine_items(id) ON DELETE CASCADE;
+
+      CREATE INDEX idx_daily_completions_item_date ON daily_completions(item_id, date);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {

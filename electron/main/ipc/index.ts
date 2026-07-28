@@ -1,23 +1,25 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
 import { IpcChannels } from '@shared/ipc'
-import type { CreateExceptionInput, CreateTaskInput, UpdateTaskInput } from '@shared/types'
+import type { CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { DailyRepository } from '../db/repositories/dailyRepo'
 import type { ListRepository } from '../db/repositories/listRepo'
 import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { join } from 'path'
-import { readdirSync, readFileSync, copyFileSync, existsSync } from 'fs'
+import { readdirSync, readFileSync, copyFileSync, existsSync, unlinkSync } from 'fs'
 
 export interface Repositories {
   tasks: TaskRepository
   lists: ListRepository
   tags: TagRepository
   settings: SettingsRepository
+  daily: DailyRepository
   dataRoot: string
 }
 
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings, dataRoot } = repos
+  const { tasks, lists, tags, settings, daily, dataRoot } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -71,6 +73,25 @@ export function registerIpcHandlers(repos: Repositories): void {
     settings.set(key, value),
   )
 
+  // ── Daily routines ──
+  ipcMain.handle(IpcChannels.dailyGetAll, () => daily.getAll())
+  ipcMain.handle(IpcChannels.dailyCreate, (_e, input: CreateDailyRoutineInput) =>
+    daily.create(input),
+  )
+  ipcMain.handle(IpcChannels.dailyUpdate, (_e, id: string, patch: UpdateDailyRoutineInput) =>
+    daily.update(id, patch),
+  )
+  ipcMain.handle(IpcChannels.dailyDelete, (_e, id: string) => daily.remove(id))
+  ipcMain.handle(IpcChannels.dailyGetCompletions, (_e, date: string) =>
+    daily.getCompletions(date),
+  )
+  ipcMain.handle(IpcChannels.dailyIncrement, (_e, routineId: string, date: string, itemId?: string | null) =>
+    daily.increment(routineId, date, itemId),
+  )
+  ipcMain.handle(IpcChannels.dailyDecrement, (_e, routineId: string, date: string, itemId?: string | null) =>
+    daily.decrement(routineId, date, itemId),
+  )
+
   // ── File dialogs ──
   ipcMain.handle(IpcChannels.dialogOpenImageFile, async () => {
     const result = await dialog.showOpenDialog({
@@ -106,6 +127,32 @@ export function registerIpcHandlers(repos: Repositories): void {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? 'png'
     const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
     return `data:${mime};base64,${buf.toString('base64')}`
+  })
+
+  // ── Brand image ──
+  const brandDir = join(dataRoot, 'brand')
+
+  ipcMain.handle(IpcChannels.brandSetImage, (_e, filePath: string) => {
+    const ext = filePath.split('.').pop() ?? 'png'
+    const dest = join(brandDir, `logo.${ext}`)
+    copyFileSync(filePath, dest)
+    return dest
+  })
+  ipcMain.handle(IpcChannels.brandGetDataUrl, () => {
+    if (!existsSync(brandDir)) return null
+    const files = readdirSync(brandDir).filter((f) => /^logo\./.test(f))
+    if (files.length === 0) return null
+    const filePath = join(brandDir, files[0])
+    const buf = readFileSync(filePath)
+    const ext = files[0].split('.').pop()?.toLowerCase() ?? 'png'
+    const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
+  })
+  ipcMain.handle(IpcChannels.brandClearImage, () => {
+    if (existsSync(brandDir)) {
+      const files = readdirSync(brandDir).filter((f) => /^logo\./.test(f))
+      for (const f of files) unlinkSync(join(brandDir, f))
+    }
   })
 
   // ── Background image ──

@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { initDatabase } from './db'
+import { createDailyRepository } from './db/repositories/dailyRepo'
 import { createListRepository } from './db/repositories/listRepo'
 import { createTagRepository } from './db/repositories/tagRepo'
 import { createTaskRepository } from './db/repositories/taskRepo'
@@ -54,6 +55,7 @@ app.whenReady().then(() => {
   ensureDir(join(dataRoot, 'db'))
   ensureDir(join(dataRoot, 'icons'))
   ensureDir(join(dataRoot, 'backgrounds'))
+  ensureDir(join(dataRoot, 'brand'))
 
   const dbPath = join(dataRoot, 'db', 'younglife.db')
   const db = initDatabase(dbPath)
@@ -62,8 +64,9 @@ app.whenReady().then(() => {
   const lists = createListRepository(db)
   const tags = createTagRepository(db)
   const settings = createSettingsRepository(db)
+  const daily = createDailyRepository(db)
 
-  registerIpcHandlers({ tasks, lists, tags, settings, dataRoot })
+  registerIpcHandlers({ tasks, lists, tags, settings, daily, dataRoot })
   startReminderScheduler(tasks)
 
   createWindow()

@@ -1,6 +1,10 @@
 import type {
+  CreateDailyRoutineInput,
   CreateExceptionInput,
   CreateTaskInput,
+  DailyCompletion,
+  DailyRoutine,
+  DailyRoutineItem,
   List,
   SettingsRow,
   Tag,
@@ -8,6 +12,7 @@ import type {
   TaskException,
   TaskTag,
   TasksByRangeResult,
+  UpdateDailyRoutineInput,
   UpdateTaskInput,
 } from './types'
 
@@ -54,4 +59,18 @@ export interface Api {
   setBgImage(filePath: string): Promise<string>
   getBgImagePath(): Promise<string | null>
   clearBgImage(): Promise<void>
+
+  // Brand
+  setBrandImage(filePath: string): Promise<string>
+  getBrandDataUrl(): Promise<string | null>
+  clearBrandImage(): Promise<void>
+
+  // Daily routines
+  getDailyRoutines(): Promise<DailyRoutine[]>
+  createDailyRoutine(input: CreateDailyRoutineInput): Promise<DailyRoutine>
+  updateDailyRoutine(id: string, patch: UpdateDailyRoutineInput): Promise<DailyRoutine>
+  deleteDailyRoutine(id: string): Promise<void>
+  getDailyCompletions(date: string): Promise<DailyCompletion[]>
+  incrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
+  decrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
 }

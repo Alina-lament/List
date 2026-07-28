@@ -25,6 +25,9 @@ export interface SettingsState {
   bgScale: 'cover' | 'contain' | 'fill'
   // 图标
   appIconPath: string | null
+  // 品牌
+  brandName: string
+  brandImageUrl: string | null  // data URL，启动时加载
   // 日历
   scrollSensitivity: number
   // 操作状态
@@ -36,6 +39,9 @@ export interface SettingsState {
   updateBgSetting(key: string, value: string | number): Promise<void>
   clearBgImage(): Promise<void>
   setAppIcon(iconPath: string): Promise<void>
+  setBrandName(name: string): Promise<void>
+  setBrandImage(filePath: string): Promise<void>
+  clearBrandImage(): Promise<void>
   applyPreset(name: string): Promise<void>
   resetDefaults(): Promise<void>
 }
@@ -92,6 +98,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   bgBlur: Number(getDefault('bgBlur')) || 0,
   bgScale: (getDefault('bgScale') as 'cover') || 'cover',
   appIconPath: null,
+  brandName: getDefault('brandName'),
+  brandImageUrl: null,
   scrollSensitivity: Number(getDefault('scrollSensitivity')) || 200,
   loading: false,
 
@@ -119,6 +127,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         bgBlur: Number(map.bgBlur) || 0,
         bgScale: (map.bgScale as 'cover' | 'contain' | 'fill') || 'cover',
         appIconPath: map.appIconPath || null,
+        brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
         bgImagePath: await api.getBgImagePath(),
         loading: false,
@@ -128,6 +137,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       if (iconPath) {
         await api.setWindowIcon(iconPath)
       }
+      // 加载品牌图片 data URL
+      const brandUrl = await api.getBrandDataUrl()
+      if (brandUrl) set({ brandImageUrl: brandUrl })
     } catch {
       set({ loading: false })
     }
@@ -159,6 +171,24 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     await api.setWindowIcon(iconPath)
     await api.updateSetting('appIconPath', iconPath)
     set({ appIconPath: iconPath })
+  },
+
+  async setBrandName(name) {
+    await api.updateSetting('brandName', name)
+    set({ brandName: name })
+  },
+
+  async setBrandImage(filePath) {
+    const dest = await api.setBrandImage(filePath)
+    await api.updateSetting('brandImagePath', dest)
+    const url = await api.getBrandDataUrl()
+    set({ brandImageUrl: url })
+  },
+
+  async clearBrandImage() {
+    await api.clearBrandImage()
+    await api.updateSetting('brandImagePath', '')
+    set({ brandImageUrl: null })
   },
 
   async applyPreset(name) {
