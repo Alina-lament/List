@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased select-none font-sans;
+  }
+  ::placeholder {
+    @apply text-ink-4;
+  }
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 原生 checkbox / radio 改用钴蓝 */
+input[type='checkbox'] {
+  accent-color: #2563eb;
+}
+input[type='date'],
+input[type='time'] {
+  color-scheme: light;
+}

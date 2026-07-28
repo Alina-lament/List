@@ -1,0 +1,19 @@
+appId: com.younglife.app
+productName: YoungLife
+npmRebuild: false
+directories:
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - '**/*.node'
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  language: 2052
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

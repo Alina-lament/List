@@ -1,0 +1,129 @@
+import { RRule } from 'rrule'
+import type { List, Tag, Task, TaskException, TasksByRangeResult, TaskTag } from '@shared/types'
+import type { CalendarTaskInstance } from '@/types/calendar'
+import { pad2 } from './date-utils'
+
+/** 'YYYY-MM-DD' → UTC Date（避免本地时区导致 rrule 展开偏移） */
+function utcDate(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d))
+}
+
+function toKey(d: Date): string {
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
+}
+
+function exceptionKey(taskId: string, date: string): string {
+  return `${taskId}|${date}`
+}
+
+function buildInstance(
+  task: Task,
+  date: string,
+  isRecurringInstance: boolean,
+  listsById: Map<string, List>,
+  tagsByTask: Map<string, Tag[]>,
+  override?: TaskException,
+): CalendarTaskInstance {
+  return {
+    instance_id: isRecurringInstance ? `${task.id}|${date}` : task.id,
+    task_id: task.id,
+    date,
+    title: override?.title ?? task.title,
+    description: override?.description ?? task.description,
+    is_completed: Boolean(override?.is_completed ?? task.is_completed),
+    due_time: override?.due_time ?? task.due_time,
+    priority: override?.priority ?? task.priority,
+    list_id: task.list_id,
+    list_color: listsById.get(task.list_id)?.color ?? '#6366f1',
+    tags: tagsByTask.get(task.id) ?? [],
+    is_recurring_instance: isRecurringInstance,
+    reminder_minutes: override?.reminder_minutes ?? task.reminder_minutes,
+  }
+}
+
+function sortInstances(a: CalendarTaskInstance, b: CalendarTaskInstance): number {
+  if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
+  if (a.priority !== b.priority) return b.priority - a.priority
+  if ((a.due_time ?? '') !== (b.due_time ?? '')) {
+    if (a.due_time === null) return 1
+    if (b.due_time === null) return -1
+    return a.due_time < b.due_time ? -1 : 1
+  }
+  return a.title.localeCompare(b.title, 'zh-CN')
+}
+
+/** 展开某日期范围内的所有任务实例（含重复任务），按 dateKey 分桶 */
+export function expandInstances(
+  data: TasksByRangeResult,
+  start: string,
+  end: string,
+): Record<string, CalendarTaskInstance[]> {
+  const listsById = new Map(data.lists.map((l) => [l.id, l]))
+  const tagsById = new Map(data.tags.map((t) => [t.id, t]))
+  const tagsByTask = new Map<string, Tag[]>()
+  for (const tt of data.taskTags as TaskTag[]) {
+    const tag = tagsById.get(tt.tag_id)
+    if (!tag) continue
+    const arr = tagsByTask.get(tt.task_id) ?? []
+    arr.push(tag)
+    tagsByTask.set(tt.task_id, arr)
+  }
+  const exceptions = new Map<string, TaskException>()
+  for (const ex of data.exceptions) {
+    exceptions.set(exceptionKey(ex.task_id, ex.exception_date), ex)
+  }
+
+  const byDate: Record<string, CalendarTaskInstance[]> = {}
+  const push = (instance: CalendarTaskInstance) => {
+    const arr = byDate[instance.date] ?? []
+    arr.push(instance)
+    byDate[instance.date] = arr
+  }
+
+  for (const task of data.nonRecurring) {
+    if (!task.due_date) continue
+    const ex = exceptions.get(exceptionKey(task.id, task.due_date))
+    if (ex?.action === 'deleted') continue
+    push(buildInstance(task, task.due_date, false, listsById, tagsByTask, ex))
+  }
+
+  const rangeStart = utcDate(start)
+  const rangeEnd = new Date(utcDate(end).getTime() + 24 * 60 * 60 * 1000 - 1)
+
+  for (const task of data.recurring) {
+    if (!task.rrule || !task.due_date) continue
+    try {
+      const options = RRule.parseString(task.rrule)
+      options.dtstart = utcDate(task.due_date)
+      if (task.rrule_end_date) {
+        options.until = new Date(utcDate(task.rrule_end_date).getTime() + 24 * 60 * 60 * 1000 - 1)
+      }
+      const rule = new RRule(options)
+      const dates = rule.between(rangeStart, rangeEnd, true)
+      for (const d of dates) {
+        const key = toKey(d)
+        const ex = exceptions.get(exceptionKey(task.id, key))
+        if (ex?.action === 'deleted') continue
+        push(buildInstance(task, key, true, listsById, tagsByTask, ex))
+      }
+    } catch {
+      // 无效 rrule 字符串：跳过该任务，不影响日历渲染
+    }
+  }
+
+  for (const arr of Object.values(byDate)) arr.sort(sortInstances)
+  return byDate
+}
+
+/** 生成 rrule 的可读预览日期（前 N 个） */
+export function previewRRule(rrule: string, dtstartKey: string, count = 3): string[] {
+  try {
+    const options = RRule.parseString(rrule)
+    options.dtstart = utcDate(dtstartKey)
+    const rule = new RRule(options)
+    return rule.all((_, i) => i < count).map(toKey)
+  } catch {
+    return []
+  }
+}
