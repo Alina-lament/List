@@ -4,25 +4,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // ── 明亮现代色板：清新白底 + 柔和灰阶 + 靛蓝强调 ──
-        canvas: '#fdfdfc',        // 暖白主背景
-        'canvas-2': '#f4f5f7',    // 次级区块（侧栏/面板），柔和浅灰
-        'canvas-3': '#eaecf0',    // 分隔线/边框，精致灰
-        'canvas-4': '#d4d7de',    // 深色边框（hover/聚焦）
-        ink: '#0f172a',           // 富黑主文
-        'ink-2': '#334155',       // 深灰次文
-        'ink-3': '#64748b',       // 中灰辅文
-        'ink-4': '#94a3b8',       // 浅灰禁用/占位
+        // ── CSS Variables 接管，带默认回退值 ──
+        canvas: 'var(--color-canvas-bg, #fdfdfc)',
+        'canvas-2': 'var(--color-sidebar-bg, #f4f5f7)',
+        'canvas-3': 'var(--color-border, #eaecf0)',
+        'canvas-4': '#d4d7de',
+        ink: 'var(--color-ink, #0f172a)',
+        'ink-2': 'var(--color-ink-2, #334155)',
+        'ink-3': 'var(--color-ink-3, #64748b)',
+        'ink-4': '#94a3b8',
         royal: {
-          DEFAULT: '#4f6ef7',     // 明亮靛蓝（强调/激活/主按钮）
-          dark: '#3d5ce5',        // 深靛蓝（hover）
-          light: '#7b93fa',       // 亮靛蓝
-          50: '#eef1fe',          // 极浅靛蓝（选中底）
+          DEFAULT: 'var(--color-royal, #4f6ef7)',
+          dark: 'var(--color-royal-dark, #3d5ce5)',
+          light: 'var(--color-royal-light, #7b93fa)',
+          50: 'var(--color-royal-50, #eef1fe)',
         },
-        // 优先级三色：现代高饱和
-        prihigh: '#f43f5e',       // 玫红（高优先级）
-        primed: '#f59e0b',        // 琥珀（中优先级）
-        prilow: '#22c55e',        // 翠绿（低优先级）
+        prihigh: 'var(--color-prihigh, #f43f5e)',
+        primed: 'var(--color-primed, #f59e0b)',
+        prilow: 'var(--color-prilow, #22c55e)',
       },
       fontFamily: {
         sans: ['"Inter"', '"PingFang SC"', '"Microsoft YaHei"', 'system-ui', 'sans-serif'],

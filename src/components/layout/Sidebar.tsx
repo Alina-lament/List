@@ -70,7 +70,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-canvas-3/70 bg-canvas-2/80 backdrop-blur-sm">
+    <aside className="flex w-60 shrink-0 flex-col border-r border-canvas-3 bg-canvas-2 backdrop-blur-sm">
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 py-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white shadow-xs">
@@ -102,7 +102,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="mx-4 mt-3 border-t border-canvas-3/60" />
+      <div className="mx-4 mt-3 border-t border-canvas-3" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {/* 清单分组标题 */}
@@ -145,7 +145,7 @@ export function Sidebar() {
                       if (e.key === 'Enter') submitRename()
                       if (e.key === 'Escape') setRenamingId(null)
                     }}
-                    className="w-full rounded-lg border border-royal bg-canvas px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-royal/20"
+                    className="w-full rounded-lg border border-royal bg-canvas px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-royal-50/50"
                   />
                 ) : (
                   <>
@@ -194,7 +194,7 @@ export function Sidebar() {
                 if (e.key === 'Escape') setAddingList(false)
               }}
               placeholder="清单名称"
-              className="w-full rounded-lg border border-canvas-3 bg-canvas px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal/20"
+              className="w-full rounded-lg border border-canvas-3 bg-canvas px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal-50/50"
             />
             <ColorPicker value={newListColor} onChange={setNewListColor} />
             <div className="flex justify-end gap-2">
@@ -217,7 +217,7 @@ export function Sidebar() {
         {/* 标签分组 */}
         {tags.length > 0 && (
           <>
-            <div className="mb-2 mt-5 flex items-center justify-between border-t border-canvas-3/60 pt-4 px-2">
+            <div className="mb-2 mt-5 flex items-center justify-between border-t border-canvas-3 pt-4 px-2">
               <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">标签</span>
               <button
                 className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
@@ -257,7 +257,7 @@ export function Sidebar() {
                     if (e.key === 'Escape') setAddingTag(false)
                   }}
                   placeholder="标签名"
-                  className="w-20 rounded-lg border border-canvas-3 bg-white px-2.5 py-1 text-xs text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal/20"
+                  className="w-20 rounded-lg border border-canvas-3 bg-white px-2.5 py-1 text-xs text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal-50/50"
                 />
               )}
             </div>

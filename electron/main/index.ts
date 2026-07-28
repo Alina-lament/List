@@ -4,6 +4,7 @@ import { initDatabase } from './db'
 import { createListRepository } from './db/repositories/listRepo'
 import { createTagRepository } from './db/repositories/tagRepo'
 import { createTaskRepository } from './db/repositories/taskRepo'
+import { createSettingsRepository } from './db/repositories/settingsRepo'
 import { registerIpcHandlers } from './ipc'
 import { startReminderScheduler } from './reminders/scheduler'
 
@@ -43,13 +44,14 @@ app.whenReady().then(() => {
   const tasks = createTaskRepository(db)
   const lists = createListRepository(db)
   const tags = createTagRepository(db)
+  const settings = createSettingsRepository(db)
 
   // 首次运行：播种一个默认清单
   if (lists.getAll().length === 0) {
     lists.create('默认清单')
   }
 
-  registerIpcHandlers({ tasks, lists, tags })
+  registerIpcHandlers({ tasks, lists, tags, settings })
   startReminderScheduler(tasks)
 
   createWindow()

@@ -17,7 +17,8 @@
     @apply text-ink-4;
   }
   ::selection {
-    @apply bg-royal/20 text-ink;
+    background: var(--color-royal-50, #eef1fe);
+    color: var(--color-ink, #0f172a);
   }
 }
 

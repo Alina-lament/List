@@ -111,3 +111,32 @@ export interface DueReminder {
   due_time: string
   reminder_minutes: number
 }
+
+// ── Settings ──
+export interface SettingsRow {
+  key: string
+  value: string
+  updated_at: string
+}
+
+export const DEFAULT_SETTINGS: Record<string, string> = {
+  sidebarBg: '#f4f5f7',
+  canvasBg: '#fdfdfc',
+  cardBg: '#ffffff',
+  royal: '#4f6ef7',
+  royalDark: '#3d5ce5',
+  royalLight: '#7b93fa',
+  royal50: '#eef1fe',
+  ink: '#0f172a',
+  ink2: '#334155',
+  ink3: '#64748b',
+  borderColor: '#eaecf0',
+  prihigh: '#f43f5e',
+  primed: '#f59e0b',
+  prilow: '#22c55e',
+  bgImagePath: '',
+  bgOpacity: '30',
+  bgBlur: '0',
+  bgScale: 'cover',
+  appIconPath: '',
+}

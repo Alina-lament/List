@@ -30,7 +30,7 @@ export function Modal({ open, onClose, title, children, footer, width = 'max-w-l
           </div>
           <div className="max-h-[70vh] overflow-y-auto px-6 py-5">{children}</div>
           {footer && (
-            <div className="flex justify-end gap-2 border-t border-canvas-3 bg-canvas-2/50 px-6 py-4 rounded-b-2xl">
+            <div className="flex justify-end gap-2 border-t border-canvas-3 bg-canvas-2 px-6 py-4 rounded-b-2xl">
               {footer}
             </div>
           )}

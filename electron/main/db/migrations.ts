@@ -71,6 +71,37 @@ const MIGRATIONS: { version: number; sql: string }[] = [
         WHERE reminder_minutes IS NOT NULL;
     `,
   },
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE settings (
+        key        TEXT PRIMARY KEY,
+        value      TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO settings (key, value, updated_at) VALUES
+        ('sidebarBg',   '#f4f5f7', datetime('now')),
+        ('canvasBg',    '#fdfdfc', datetime('now')),
+        ('cardBg',      '#ffffff', datetime('now')),
+        ('royal',       '#4f6ef7', datetime('now')),
+        ('royalDark',   '#3d5ce5', datetime('now')),
+        ('royalLight',  '#7b93fa', datetime('now')),
+        ('royal50',     '#eef1fe', datetime('now')),
+        ('ink',         '#0f172a', datetime('now')),
+        ('ink2',        '#334155', datetime('now')),
+        ('ink3',        '#64748b', datetime('now')),
+        ('borderColor', '#eaecf0', datetime('now')),
+        ('prihigh',     '#f43f5e', datetime('now')),
+        ('primed',      '#f59e0b', datetime('now')),
+        ('prilow',      '#22c55e', datetime('now')),
+        ('bgImagePath', '',        datetime('now')),
+        ('bgOpacity',   '30',      datetime('now')),
+        ('bgBlur',      '0',       datetime('now')),
+        ('bgScale',     'cover',   datetime('now')),
+        ('appIconPath', '',        datetime('now'));
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {

@@ -75,7 +75,7 @@ export const TaskItem = memo(function TaskItem({
       onDoubleClick={() => onEdit(task)}
       className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-150 ${
         selected
-          ? 'border-royal/40 bg-royal-50/80 shadow-card'
+          ? 'border-royal bg-royal-50 shadow-card'
           : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
       } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >

@@ -21,6 +21,24 @@ export const IpcChannels = {
   tagsAddToTask: 'tags:addToTask',
   tagsRemoveFromTask: 'tags:removeFromTask',
   remindersGetDue: 'reminders:getDue',
+
+  // settings
+  settingsGetAll: 'settings:getAll',
+  settingsUpdate: 'settings:update',
+
+  // file dialogs
+  dialogOpenImageFile: 'dialog:openImageFile',
+
+  // icons
+  iconsGetFolder: 'icons:getFolder',
+  iconsList: 'icons:list',
+  iconsOpenFolder: 'icons:openFolder',
+  iconsSetApp: 'icons:setApp',
+
+  // background image
+  bgSetImage: 'bg:setImage',
+  bgGetImagePath: 'bg:getImagePath',
+  bgClearImage: 'bg:clearImage',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

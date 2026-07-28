@@ -79,7 +79,7 @@ export function CalendarView() {
         {WEEKDAYS.map((d) => (
           <div
             key={d}
-            className="border-b border-r border-canvas-3/70 bg-canvas-2/50 py-2.5 text-center text-xs font-semibold text-ink-2 uppercase tracking-wide"
+            className="border-b border-r border-canvas-3 bg-canvas-2 py-2.5 text-center text-xs font-semibold text-ink-2 uppercase tracking-wide"
           >
             {d}
           </div>

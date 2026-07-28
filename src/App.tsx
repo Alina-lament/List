@@ -122,7 +122,7 @@ export default function App() {
 
       <DragOverlay>
         {overlayTitle && (
-          <div className="rounded-lg border border-royal/40 bg-canvas px-3 py-1.5 text-sm font-medium text-ink shadow-card-lg">
+          <div className="rounded-lg border border-royal bg-canvas px-3 py-1.5 text-sm font-medium text-ink shadow-card-lg">
             {overlayTitle}
           </div>
         )}

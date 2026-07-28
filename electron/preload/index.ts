@@ -34,6 +34,24 @@ const api: Api = {
   addTagToTask: (taskId, tagId) => ipcRenderer.invoke(IpcChannels.tagsAddToTask, taskId, tagId),
   removeTagFromTask: (taskId, tagId) =>
     ipcRenderer.invoke(IpcChannels.tagsRemoveFromTask, taskId, tagId),
+
+  // Settings
+  getAllSettings: () => ipcRenderer.invoke(IpcChannels.settingsGetAll),
+  updateSetting: (key, value) => ipcRenderer.invoke(IpcChannels.settingsUpdate, key, value),
+
+  // File dialogs
+  openImageFileDialog: () => ipcRenderer.invoke(IpcChannels.dialogOpenImageFile),
+
+  // Icons
+  getIconsFolder: () => ipcRenderer.invoke(IpcChannels.iconsGetFolder),
+  listIcons: () => ipcRenderer.invoke(IpcChannels.iconsList),
+  openIconsFolder: () => ipcRenderer.invoke(IpcChannels.iconsOpenFolder),
+  setWindowIcon: (iconPath) => ipcRenderer.invoke(IpcChannels.iconsSetApp, iconPath),
+
+  // Background image
+  setBgImage: (filePath) => ipcRenderer.invoke(IpcChannels.bgSetImage, filePath),
+  getBgImagePath: () => ipcRenderer.invoke(IpcChannels.bgGetImagePath),
+  clearBgImage: () => ipcRenderer.invoke(IpcChannels.bgClearImage),
 }
 
 contextBridge.exposeInMainWorld('api', api)

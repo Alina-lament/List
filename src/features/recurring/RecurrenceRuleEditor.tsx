@@ -116,7 +116,7 @@ export function RecurrenceRuleEditor({
   const preview = value.rrule ? previewRRule(value.rrule, startDate ?? todayKey()) : []
 
   return (
-    <div className="space-y-2.5 rounded-xl border border-canvas-3 bg-canvas-2/50 p-3.5">
+    <div className="space-y-2.5 rounded-xl border border-canvas-3 bg-canvas-2 p-3.5">
       <Field label="重复">
         <Select
           value={freq}

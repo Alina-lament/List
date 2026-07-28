@@ -77,7 +77,7 @@ export function TaskListView() {
           onChange={(e) => setQuickTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
           placeholder="添加任务，按回车创建…"
-          className="mb-3 w-full rounded-xl border border-canvas-3 bg-canvas-2/50 px-4 py-2.5 text-sm text-ink placeholder:text-ink-4 transition-all duration-150 hover:border-canvas-4 focus:border-royal focus:bg-white focus:outline-none focus:ring-3 focus:ring-royal/20"
+          className="mb-3 w-full rounded-xl border border-canvas-3 bg-canvas-2 px-4 py-2.5 text-sm text-ink placeholder:text-ink-4 transition-all duration-150 hover:border-canvas-4 focus:border-royal focus:bg-white focus:outline-none focus:ring-3 focus:ring-royal-50/50"
         />
 
         <div className="mb-4 flex items-center gap-2 text-xs">

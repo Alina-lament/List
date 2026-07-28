@@ -2,6 +2,7 @@ import type {
   CreateExceptionInput,
   CreateTaskInput,
   List,
+  SettingsRow,
   Tag,
   Task,
   TaskException,
@@ -34,4 +35,22 @@ export interface Api {
   deleteTag(id: string): Promise<void>
   addTagToTask(taskId: string, tagId: string): Promise<void>
   removeTagFromTask(taskId: string, tagId: string): Promise<void>
+
+  // Settings
+  getAllSettings(): Promise<SettingsRow[]>
+  updateSetting(key: string, value: string): Promise<SettingsRow>
+
+  // File dialogs
+  openImageFileDialog(): Promise<string | null>
+
+  // Icons
+  getIconsFolder(): Promise<string>
+  listIcons(): Promise<string[]>
+  openIconsFolder(): Promise<void>
+  setWindowIcon(iconPath: string): Promise<void>
+
+  // Background image
+  setBgImage(filePath: string): Promise<string>
+  getBgImagePath(): Promise<string | null>
+  clearBgImage(): Promise<void>
 }
