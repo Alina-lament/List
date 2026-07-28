@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTasksStore } from '../store'
-import { Input, Select } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Input'
 import { RecurrenceRuleEditor, type RecurrenceValue } from '@/features/recurring/RecurrenceRuleEditor'
 import { PRIORITY_COLORS } from './TaskItem'
-import { parseDateKey, todayKey } from '@/lib/date-utils'
+import { parseDateKey, todayKey, pad2 } from '@/lib/date-utils'
 import { useLayoutStore } from '@/components/layout/layoutStore'
+import dayjs from 'dayjs'
 
 const PRIORITY_OPTIONS = [
-  { value: 0, label: '无优先级' },
-  { value: 1, label: '低' },
-  { value: 2, label: '中' },
   { value: 3, label: '高' },
+  { value: 2, label: '中' },
+  { value: 1, label: '低' },
+  { value: 0, label: '无优先级' },
 ] as const
 
 const REMINDER_OPTIONS = [
@@ -75,6 +76,8 @@ export function TaskDetailPanel() {
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({ rrule: null, rrule_end_date: null })
   const [tagIds, setTagIds] = useState<string[]>([])
   const [panel, setPanel] = useState<PanelKind | null>(null)
+  const [timePanel, setTimePanel] = useState<'hour' | 'min' | null>(null)
+  const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
   const detailWidth = useLayoutStore((s) => s.detailWidth)
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export function TaskDetailPanel() {
 
   return (
     <aside className="relative flex min-w-0 shrink-0 flex-col bg-white" style={{ width: detailWidth }}>
-      {panel && <div className="fixed inset-0 z-10" onClick={() => setPanel(null)} />}
+      {(panel || timePanel) && <div className="fixed inset-0 z-10" onClick={() => { setPanel(null); setTimePanel(null) }} />}
 
       {/* ====== 顶部：完成按钮 + 日期 + 优先级旗帜 ====== */}
       <div className="flex items-center gap-3 px-5 pt-5">
@@ -179,26 +182,103 @@ export function TaskDetailPanel() {
           </button>
 
           {panel === 'date' && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-xl border border-canvas-3 bg-white p-3 shadow-card-xl">
-              <div className="space-y-2">
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => {
-                    setDueDate(e.target.value)
-                    void commit({ due_date: e.target.value || null })
-                  }}
-                />
-                <Input
-                  type="time"
-                  value={dueTime}
-                  onChange={(e) => {
-                    setDueTime(e.target.value)
-                    void commit({ due_time: e.target.value || null })
-                  }}
-                />
+            <div className="absolute left-0 top-full z-20 mt-1 w-[272px] rounded-2xl border border-canvas-3 bg-white p-4 shadow-card-xl">
+              {/* 月份导航 */}
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={() => setCalMonth((c) => c.m === 1 ? { y: c.y - 1, m: 12 } : { y: c.y, m: c.m - 1 })}
+                  className="rounded-lg p-1 text-ink-3 hover:bg-canvas-2 transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <span className="text-[13px] font-semibold text-ink">{calMonth.y}年{calMonth.m}月</span>
+                <button onClick={() => setCalMonth((c) => c.m === 12 ? { y: c.y + 1, m: 1 } : { y: c.y, m: c.m + 1 })}
+                  className="rounded-lg p-1 text-ink-3 hover:bg-canvas-2 transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
               </div>
-              <div className="mt-2 flex justify-between">
+              {/* 星期头 */}
+              <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-medium text-ink-3">
+                {['一','二','三','四','五','六','日'].map(d => <span key={d}>{d}</span>)}
+              </div>
+              {/* 日历格子 */}
+              <div className="grid grid-cols-7 text-center">
+                {(() => {
+                  const first = dayjs(`${calMonth.y}-${pad2(calMonth.m)}-01`)
+                  const startDow = (first.day() + 6) % 7
+                  const daysInMonth = first.daysInMonth()
+                  const today = todayKey()
+                  const cells: React.ReactNode[] = []
+                  for (let i = 0; i < startDow; i++) cells.push(<div key={`e${i}`} />)
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const key = `${calMonth.y}-${pad2(calMonth.m)}-${pad2(d)}`
+                    const isToday = key === today
+                    const isSel = key === dueDate
+                    cells.push(
+                      <button key={key}
+                        onClick={() => { setDueDate(key); void commit({ due_date: key }) }}
+                        className={`mx-auto my-0.5 flex h-8 w-8 items-center justify-center rounded-2xl text-[12px] font-medium transition-all duration-150
+                          ${isSel ? 'bg-royal text-white shadow-sm' : isToday ? 'bg-royal-50 text-royal' : 'text-ink-2 hover:bg-canvas-2'}
+                        `}>
+                        {d}
+                      </button>
+                    )
+                  }
+                  return cells
+                })()}
+              </div>
+              {/* 时间选择器 — 自定义下拉，始终向下 */}
+              <div className="mt-3 flex items-center gap-2 border-t border-canvas-3 pt-3">
+                <div className="flex items-center gap-1 flex-1">
+                  {/* 时 */}
+                  <div className="relative flex-1">
+                    <button
+                      onClick={() => setTimePanel(timePanel === 'hour' ? null : 'hour')}
+                      className="w-full rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink hover:border-canvas-4 transition-colors">
+                      {dueTime ? dueTime.slice(0, 5) : '--:--'}
+                    </button>
+                    {timePanel === 'hour' && (
+                      <div className="absolute left-0 top-full z-20 mt-1 w-full max-h-40 overflow-y-auto rounded-2xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                        <button onClick={() => { setDueTime(''); void commit({ due_time: null }); setTimePanel(null) }}
+                          className="w-full px-3 py-1.5 text-center text-sm text-ink-3 hover:bg-canvas-2">--:--</button>
+                        {Array.from({length: 24}, (_, h) => (
+                          <button key={h}
+                            onClick={() => { setDueTime(`${pad2(h)}:00`); void commit({ due_time: `${pad2(h)}:00` }); setTimePanel(null) }}
+                            className="w-full px-3 py-1.5 text-center text-sm text-ink-2 hover:bg-canvas-2">
+                            {pad2(h)}:00
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs text-ink-3">:</span>
+                  {/* 分 */}
+                  <div className="relative flex-1">
+                    <button
+                      onClick={() => dueTime && setTimePanel(timePanel === 'min' ? null : 'min')}
+                      disabled={!dueTime}
+                      className="w-full rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink hover:border-canvas-4 transition-colors disabled:opacity-40">
+                      {dueTime ? dueTime.slice(-2) : '--'}
+                    </button>
+                    {timePanel === 'min' && (
+                      <div className="absolute left-0 top-full z-20 mt-1 w-full max-h-36 overflow-y-auto rounded-2xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                        {['00','15','30','45'].map(m => (
+                          <button key={m}
+                            onClick={() => {
+                              const h = dueTime ? dueTime.slice(0, 2) : pad2(new Date().getHours())
+                              const v = `${h}:${m}`
+                              setDueTime(v)
+                              void commit({ due_time: v })
+                              setTimePanel(null)
+                            }}
+                            className="w-full px-3 py-1.5 text-center text-sm text-ink-2 hover:bg-canvas-2">
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex justify-between">
                 <button
                   onClick={() => {
                     setDueDate('')
@@ -206,16 +286,10 @@ export function TaskDetailPanel() {
                     void commit({ due_date: null, due_time: null })
                     setPanel(null)
                   }}
-                  className="rounded-lg px-2 py-1 text-xs text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh"
-                >
-                  清除日期
-                </button>
-                <button
-                  onClick={() => setPanel(null)}
-                  className="rounded-lg bg-royal px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-royal-dark"
-                >
-                  完成
-                </button>
+                  className="rounded-xl px-3 py-1.5 text-xs font-medium text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh"
+                >清除日期</button>
+                <button onClick={() => setPanel(null)}
+                  className="rounded-xl bg-royal px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-royal-dark">完成</button>
               </div>
             </div>
           )}

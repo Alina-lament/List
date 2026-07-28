@@ -47,6 +47,10 @@ interface TaskItemProps {
   onEdit: (task: Task) => void
   onSelect?: (id: string) => void
   sortable?: boolean
+  variant?: 'default' | 'overdue'
+  /** 全清单视图时显示清单信息 */
+  listColor?: string
+  listName?: string
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -57,6 +61,9 @@ export const TaskItem = memo(function TaskItem({
   onEdit,
   onSelect,
   sortable = true,
+  variant = 'default',
+  listColor,
+  listName,
 }: TaskItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `task:${task.id}`,
@@ -65,7 +72,9 @@ export const TaskItem = memo(function TaskItem({
   })
 
   const completed = Boolean(task.is_completed)
-  const overdue = !completed && task.due_date !== null && task.due_date < todayKey()
+  const today = todayKey()
+  const isToday = !completed && task.due_date === today
+  const isOverdue = variant === 'overdue' || (!completed && task.due_date !== null && task.due_date < today)
 
   return (
     <div
@@ -77,7 +86,9 @@ export const TaskItem = memo(function TaskItem({
       className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-150 ${
         selected
           ? 'border-royal bg-royal-50 shadow-card'
-          : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
+          : isOverdue
+            ? 'border-l-[3px] border-l-prihigh border-transparent bg-red-50/40 hover:border-canvas-3 hover:border-l-prihigh'
+            : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
       } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >
       {sortable && (
@@ -104,6 +115,13 @@ export const TaskItem = memo(function TaskItem({
         onChange={() => onToggle(task)}
         className="h-4 w-4 shrink-0 cursor-pointer rounded border-canvas-3"
       />
+      {listColor && (
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: listColor }}
+          title={listName}
+        />
+      )}
       <span
         className={`flex-1 truncate text-left text-sm ${
           completed ? 'text-ink-4 line-through' : 'text-ink'
@@ -121,10 +139,10 @@ export const TaskItem = memo(function TaskItem({
       {task.due_date && (
         <span
           className={`shrink-0 text-xs ${
-            overdue ? 'font-semibold text-prihigh' : 'text-ink-3'
+            isOverdue ? 'font-semibold text-prihigh' : isToday ? 'font-semibold text-royal' : 'text-ink-3'
           }`}
         >
-          {task.due_date.slice(5)}
+          {isToday ? '今天' : task.due_date.slice(5)}
           {task.due_time ? ` ${task.due_time}` : ''}
         </span>
       )}

@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
 import { IpcChannels } from '@shared/ipc'
 import type { CreateExceptionInput, CreateTaskInput, UpdateTaskInput } from '@shared/types'
 import type { ListRepository } from '../db/repositories/listRepo'
@@ -6,17 +6,18 @@ import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { join } from 'path'
-import { readdirSync, readFileSync, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { readdirSync, readFileSync, copyFileSync, existsSync } from 'fs'
 
 export interface Repositories {
   tasks: TaskRepository
   lists: ListRepository
   tags: TagRepository
   settings: SettingsRepository
+  dataRoot: string
 }
 
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings } = repos
+  const { tasks, lists, tags, settings, dataRoot } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -80,8 +81,7 @@ export function registerIpcHandlers(repos: Repositories): void {
   })
 
   // ── Icons ──
-  const iconsDir = join(__dirname, '..', '..', 'icons')
-  if (!existsSync(iconsDir)) mkdirSync(iconsDir, { recursive: true })
+  const iconsDir = join(dataRoot, 'icons')
 
   ipcMain.handle(IpcChannels.iconsGetFolder, () => iconsDir)
   ipcMain.handle(IpcChannels.iconsList, () => {
@@ -92,7 +92,7 @@ export function registerIpcHandlers(repos: Repositories): void {
   })
   ipcMain.handle(IpcChannels.iconsOpenFolder, () => shell.openPath(iconsDir))
   ipcMain.handle(IpcChannels.iconsSetApp, (_e, iconPath: string) => {
-    const win = require('electron').BrowserWindow.getAllWindows()[0]
+    const win = BrowserWindow.getAllWindows()[0]
     if (win) {
       const img = nativeImage.createFromPath(iconPath)
       win.setIcon(img)
@@ -109,8 +109,7 @@ export function registerIpcHandlers(repos: Repositories): void {
   })
 
   // ── Background image ──
-  const bgDir = join(app.getPath('userData'), 'backgrounds')
-  if (!existsSync(bgDir)) mkdirSync(bgDir, { recursive: true })
+  const bgDir = join(dataRoot, 'backgrounds')
 
   ipcMain.handle(IpcChannels.bgSetImage, (_e, filePath: string) => {
     const ext = filePath.split('.').pop() ?? 'jpg'

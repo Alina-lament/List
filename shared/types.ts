@@ -141,4 +141,5 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   appIconPath: '',
   sidebarWidth: '240',
   detailWidth: '384',
+  scrollSensitivity: '200',
 }

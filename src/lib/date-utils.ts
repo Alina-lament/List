@@ -52,3 +52,26 @@ export function isCurrentMonth(key: string, year: number, month: number): boolea
 export function formatLocalDateTime(d: Date): string {
   return `${dateKey(d)}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
+
+/** 返回 ISO 8601 周数 (1-53) */
+export function getISOWeekNumber(dateStr: string): number {
+  const d = parseDateKey(dateStr)
+  const temp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
+  // 调整为周四（ISO 周以周四所在年份为准）
+  const dayNum = (temp.getUTCDay() + 6) % 7
+  temp.setUTCDate(temp.getUTCDate() - dayNum + 3)
+  const firstThursday = new Date(Date.UTC(temp.getUTCFullYear(), 0, 4))
+  const firstThursdayDay = (firstThursday.getUTCDay() + 6) % 7
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDay)
+  const weekNum = Math.round(((temp.getTime() - firstThursday.getTime()) / 86400000) / 7) + 1
+  return weekNum
+}
+
+/** 将 42 天网格按每 7 天拆分为周数组 */
+export function gridToWeeks(grid: string[]): string[][] {
+  const weeks: string[][] = []
+  for (let i = 0; i < grid.length; i += 7) {
+    weeks.push(grid.slice(i, i + 7))
+  }
+  return weeks
+}

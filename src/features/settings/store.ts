@@ -25,6 +25,8 @@ export interface SettingsState {
   bgScale: 'cover' | 'contain' | 'fill'
   // 图标
   appIconPath: string | null
+  // 日历
+  scrollSensitivity: number
   // 操作状态
   loading: boolean
   // 动作
@@ -90,6 +92,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   bgBlur: Number(getDefault('bgBlur')) || 0,
   bgScale: (getDefault('bgScale') as 'cover') || 'cover',
   appIconPath: null,
+  scrollSensitivity: Number(getDefault('scrollSensitivity')) || 200,
   loading: false,
 
   async init() {
@@ -116,9 +119,15 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         bgBlur: Number(map.bgBlur) || 0,
         bgScale: (map.bgScale as 'cover' | 'contain' | 'fill') || 'cover',
         appIconPath: map.appIconPath || null,
+        scrollSensitivity: Number(map.scrollSensitivity) || 200,
         bgImagePath: await api.getBgImagePath(),
         loading: false,
       })
+      // 恢复窗口图标
+      const iconPath = map.appIconPath
+      if (iconPath) {
+        await api.setWindowIcon(iconPath)
+      }
     } catch {
       set({ loading: false })
     }
@@ -163,7 +172,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   async resetDefaults() {
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-      if (['bgImagePath', 'bgOpacity', 'bgBlur', 'bgScale', 'appIconPath'].includes(key)) continue
+      if (['bgImagePath', 'bgOpacity', 'bgBlur', 'bgScale', 'appIconPath', 'scrollSensitivity'].includes(key)) continue
       await api.updateSetting(key, value)
     }
     set({

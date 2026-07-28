@@ -14,10 +14,12 @@ interface TasksState {
   view: ViewMode
   loading: boolean
   error: string | null
+  _reqId: number
 
   init(): Promise<void>
   setView(view: ViewMode): void
   selectList(id: string): Promise<void>
+  selectAllLists(): Promise<void>
   selectTask(id: string | null): void
 
   createList(name: string, color?: string): Promise<void>
@@ -35,6 +37,8 @@ interface TasksState {
   deleteTag(id: string): Promise<void>
 
   clearError(): void
+  /** 获取「待定」清单 ID（无日期任务的默认存放处） */
+  getPendingListId(): string | null
 }
 
 function sortListTasks(tasks: Task[]): Task[] {
@@ -55,6 +59,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   view: 'list',
   loading: false,
   error: null,
+  _reqId: 0,
 
   async init() {
     set({ loading: true, error: null })
@@ -68,12 +73,24 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       for (const row of taskTagRows) {
         ;(taskTags[row.task_id] ??= []).push(row.tag_id)
       }
+      // 确保「待定」清单存在（无日期任务默认存放）
+      const pendingList = lists.find((l) => l.name === '待定')
+      let pendingId: string
+      if (!pendingList) {
+        pendingId = (await api.createList('待定', '#9ca3af')).id
+        lists.push({ id: pendingId, name: '待定', color: '#9ca3af', sort_order: -1, created_at: '', updated_at: '' })
+      } else {
+        pendingId = pendingList.id
+      }
       let selectedListId = get().selectedListId
-      if (!selectedListId || !lists.some((l) => l.id === selectedListId)) {
-        selectedListId = lists[0]?.id ?? null
+      if (!lists.some((l) => l.id === selectedListId)) {
+        selectedListId = null // 默认显示全部清单
       }
       set({ lists, tags, taskTags, selectedListId, loading: false })
-      if (selectedListId) await get().selectList(selectedListId)
+      // 始终加载全部清单的数据，供「今日」视图跨清单展示
+      if (lists.length > 0) {
+        await get().selectAllLists()
+      }
     } catch (e) {
       set({ loading: false, error: `初始化失败：${String(e)}` })
     }
@@ -81,18 +98,37 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   setView(view) {
     set({ view })
+    if (view === 'list') {
+      void get().selectAllLists()
+    }
   },
 
   async selectList(id) {
-    const tasks = await api.getTasksByList(id)
+    const reqId = get()._reqId + 1
+    // 同步立即更新选中高亮，异步加载任务数据
+    set({ selectedListId: id, selectedTaskId: null, _reqId: reqId })
+    try {
+      const tasks = await api.getTasksByList(id)
+      if (get()._reqId !== reqId) return
+      set((s) => ({
+        tasksByList: { ...s.tasksByList, [id]: tasks },
+      }))
+    } catch {
+      // 数据加载失败，但选中高亮已更新
+    }
+  },
+
+  async selectAllLists() {
+    // 先同步清除选中；递增请求 ID 以忽略旧回包
+    const reqId = get()._reqId + 1
+    set({ selectedListId: null, selectedTaskId: null, _reqId: reqId })
+    const { lists } = get()
+    const results = await Promise.all(lists.map((l) => api.getTasksByList(l.id)))
+    if (get()._reqId !== reqId) return // 已被更新的请求覆盖
+    const tasksByList: Record<string, Task[]> = {}
+    lists.forEach((l, i) => { tasksByList[l.id] = results[i] })
     set((s) => ({
-      selectedListId: id,
-      tasksByList: { ...s.tasksByList, [id]: tasks },
-      // 切换清单时清除任务选中（旧选中任务不属于新清单）
-      selectedTaskId:
-        s.selectedTaskId && tasks.some((t) => t.id === s.selectedTaskId)
-          ? s.selectedTaskId
-          : null,
+      tasksByList: { ...s.tasksByList, ...tasksByList },
     }))
   },
 
@@ -292,5 +328,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   clearError() {
     set({ error: null })
+  },
+
+  getPendingListId() {
+    return get().lists.find((l) => l.name === '待定')?.id ?? null
   },
 }))

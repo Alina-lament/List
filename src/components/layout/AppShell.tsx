@@ -15,7 +15,7 @@ const PRIORITY_SHORTCUTS: Record<string, number> = {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { selectedListId, selectedTaskId, tasksByList, updateTask } = useTasksStore()
+  const { lists, selectedTaskId, tasksByList, updateTask } = useTasksStore()
   const { sidebarWidth, setSidebarWidth, saveSidebarWidth, init: initLayout } = useLayoutStore()
   const [showCreate, setShowCreate] = useState(false)
 
@@ -30,10 +30,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (!e.ctrlKey || e.metaKey) return
       const priority = PRIORITY_SHORTCUTS[e.key]
       if (priority === undefined) return
-      if (!selectedTaskId || !selectedListId) return
+      if (!selectedTaskId) return
 
-      const tasks = tasksByList[selectedListId] ?? []
-      const task = tasks.find((t) => t.id === selectedTaskId)
+      const task = Object.values(tasksByList).flat().find((t) => t.id === selectedTaskId)
       if (!task || task.priority === priority) return
 
       e.preventDefault()
@@ -42,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTaskId, selectedListId, tasksByList, updateTask])
+  }, [selectedTaskId, tasksByList, updateTask])
 
   return (
     <div className="flex h-full bg-canvas">
@@ -59,7 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col">
         {/* 顶栏：右侧新建任务 */}
         <div className="flex items-center justify-end border-b border-canvas-3 bg-canvas backdrop-blur-sm px-6 py-3">
-          <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={!selectedListId}>
+          <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
             + 新建任务
           </Button>
         </div>
@@ -70,7 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         task={null}
-        defaultListId={selectedListId}
+        defaultListId={null}
       />
     </div>
   )

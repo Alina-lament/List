@@ -70,7 +70,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
   async function handleSelectIcon(fileName: string) {
     const folder = await api.getIconsFolder()
-    const path = `${folder}\\${fileName}`.replace(/\\/g, '\\\\')
+    const path = `${folder}\\${fileName}`
     await store.setAppIcon(path)
   }
 
@@ -122,6 +122,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
 // ── 快捷设置标签页（快捷键）──
 function QuickTab() {
+  const scrollSensitivity = useSettingsStore((s) => s.scrollSensitivity)
+  const updateSetting = useSettingsStore((s) => s.updateColor)
+
   const SHORTCUTS = [
     { keys: 'Ctrl + 1', desc: '高优先级', color: '#f43f5e' },
     { keys: 'Ctrl + 2', desc: '中优先级', color: '#f59e0b' },
@@ -154,9 +157,27 @@ function QuickTab() {
       </div>
 
       <div className="border-t border-canvas-3 pt-4">
-        <p className="text-xs text-ink-4">
-          更多快捷键功能即将推出
-        </p>
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase">日历滚轮</h3>
+        <p className="mb-3 text-xs text-ink-4">滚轮滚动多少像素切换一个月份</p>
+        <div className="rounded-xl border border-canvas-3 bg-white px-4 py-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs text-ink-3">灵敏度</span>
+            <span className="text-sm font-semibold text-ink">{scrollSensitivity}px</span>
+          </div>
+          <input
+            type="range"
+            min={50}
+            max={500}
+            step={10}
+            value={scrollSensitivity}
+            onChange={(e) => updateSetting('scrollSensitivity', e.target.value)}
+            className="w-full accent-royal"
+          />
+          <div className="flex justify-between mt-0.5">
+            <span className="text-[10px] text-ink-4">灵敏 (50px)</span>
+            <span className="text-[10px] text-ink-4">迟钝 (500px)</span>
+          </div>
+        </div>
       </div>
     </div>
   )
