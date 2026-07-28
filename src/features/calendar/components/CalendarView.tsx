@@ -53,14 +53,14 @@ export function CalendarView() {
   }
 
   return (
-    <div className="flex h-full flex-col px-5 py-4">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="flex h-full flex-col px-6 py-5">
+      <div className="mb-4 flex items-center gap-2">
         <Button onClick={() => shiftMonth(-1)} aria-label="上一月">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Button>
-        <h2 className="min-w-40 text-center text-xl font-bold tracking-wide text-ink">
+        <h2 className="min-w-40 text-center text-xl font-bold tracking-tight text-ink">
           {formatMonthTitle(year, month)}
         </h2>
         <Button onClick={() => shiftMonth(1)} aria-label="下一月">
@@ -68,18 +68,18 @@ export function CalendarView() {
             <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Button>
-        <Button onClick={goToday} className="ml-2">
+        <Button variant="primary" size="sm" onClick={goToday} className="ml-2">
           今天
         </Button>
-        {loading && <span className="ml-auto text-xs text-ink-3">加载中…</span>}
+        {loading && <span className="ml-auto text-xs text-ink-4">加载中…</span>}
       </div>
 
-      {/* 网格：纯白底 + 中灰线，标题行亮灰底 */}
-      <div className="grid flex-1 grid-cols-7 grid-rows-[auto_repeat(6,1fr)] overflow-hidden rounded-lg border border-canvas-3 bg-canvas shadow-card">
+      {/* 日历网格 */}
+      <div className="grid flex-1 grid-cols-7 grid-rows-[auto_repeat(6,1fr)] overflow-hidden rounded-2xl border border-canvas-3 bg-white shadow-card">
         {WEEKDAYS.map((d) => (
           <div
             key={d}
-            className="border-b border-r border-canvas-3 bg-canvas-2 py-1.5 text-center text-xs font-bold text-ink-2"
+            className="border-b border-r border-canvas-3/70 bg-canvas-2/50 py-2.5 text-center text-xs font-semibold text-ink-2 uppercase tracking-wide"
           >
             {d}
           </div>

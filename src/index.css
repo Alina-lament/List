@@ -16,16 +16,19 @@
   ::placeholder {
     @apply text-ink-4;
   }
+  ::selection {
+    @apply bg-royal/20 text-ink;
+  }
 }
 
-/* 细滚动条 */
+/* 精致细滚动条 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #d4d7de;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
@@ -34,9 +37,12 @@
   background: transparent;
 }
 
-/* 原生 checkbox / radio 改用钴蓝 */
+/* 自定义 checkbox 样式 */
 input[type='checkbox'] {
-  accent-color: #2563eb;
+  accent-color: #4f6ef7;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 input[type='date'],
 input[type='time'] {

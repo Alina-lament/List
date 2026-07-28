@@ -70,11 +70,13 @@ export function TaskDetailPanel() {
 
   if (!task) {
     return (
-      <aside className="flex w-80 shrink-0 flex-col items-center justify-center border-l border-canvas-3 bg-canvas-2/40 px-6 text-center">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-3 text-ink-4">
-          <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <p className="text-sm font-medium text-ink-3">未选择任务</p>
+      <aside className="flex w-80 shrink-0 flex-col items-center justify-center border-l border-canvas-3/70 bg-canvas-2/50 px-6 text-center">
+        <div className="mb-4 rounded-2xl bg-white p-4 shadow-xs ring-1 ring-ink/5">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-3">
+            <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium text-ink-2">选择一个任务</p>
         <p className="mt-1 text-xs text-ink-4">点击左侧任务查看详情</p>
       </aside>
     )
@@ -94,20 +96,20 @@ export function TaskDetailPanel() {
   const listColor = lists.find((l) => l.id === listId)?.color ?? '#64748b'
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-canvas-3 bg-canvas-2/40">
+    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-canvas-3/70 bg-canvas-2/50">
       {/* 头部：所属清单色条 + 标题输入 + 完成勾选 */}
-      <div className="border-b border-canvas-3 px-5 py-4">
+      <div className="border-b border-canvas-3/70 px-5 py-5">
         <div className="mb-3 flex items-center justify-between">
           <span className="flex items-center gap-2 text-xs font-medium text-ink-3">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: listColor }} />
+            <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: listColor }} />
             {lists.find((l) => l.id === listId)?.name ?? '清单'}
           </span>
           <button
             onClick={() => toggleTask(task)}
-            className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
               task.is_completed
                 ? 'bg-royal/10 text-royal-dark'
-                : 'bg-canvas-3/60 text-ink-2 hover:bg-canvas-3'
+                : 'bg-white text-ink-2 shadow-xs ring-1 ring-ink/5 hover:bg-canvas-2'
             }`}
           >
             {task.is_completed ? '✓ 已完成' : '标记完成'}
@@ -248,8 +250,8 @@ export function TaskDetailPanel() {
                       setTagIds(next)
                       void commit({ tag_ids: next })
                     }}
-                    className={`rounded-md border px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                      active ? 'border-transparent text-white' : 'hover:bg-canvas-2'
+                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-150 ${
+                      active ? 'border-transparent text-white shadow-sm' : 'hover:bg-canvas-2'
                     }`}
                     style={
                       active
@@ -265,14 +267,14 @@ export function TaskDetailPanel() {
           </div>
         )}
 
-        <div className="border-t border-canvas-3 pt-3 text-[11px] text-ink-4">
+        <div className="border-t border-canvas-3/70 pt-3 text-[11px] text-ink-4">
           创建于 {task.created_at.slice(0, 10)}
           {task.updated_at !== task.created_at && ` · 更新于 ${task.updated_at.slice(0, 10)}`}
         </div>
       </div>
 
       {/* 底部：删除 */}
-      <div className="border-t border-canvas-3 px-5 py-3">
+      <div className="border-t border-canvas-3/70 px-5 py-4">
         <Button variant="danger" size="sm" onClick={handleDelete} className="w-full">
           删除任务
         </Button>

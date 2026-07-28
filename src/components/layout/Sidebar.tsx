@@ -41,7 +41,7 @@ export function Sidebar() {
 
   const [addingList, setAddingList] = useState(false)
   const [newListName, setNewListName] = useState('')
-  const [newListColor, setNewListColor] = useState('#2563eb')
+  const [newListColor, setNewListColor] = useState('#4f6ef7')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [addingTag, setAddingTag] = useState(false)
@@ -70,30 +70,28 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-canvas-3 bg-canvas-2/60">
-      {/* 品牌区：钴蓝方块 + 近黑标题，高对比 */}
-      <div className="flex items-center gap-2.5 px-4 py-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-royal text-base font-bold text-white">
+    <aside className="flex w-60 shrink-0 flex-col border-r border-canvas-3/70 bg-canvas-2/80 backdrop-blur-sm">
+      {/* 品牌区 */}
+      <div className="flex items-center gap-3 px-5 py-4">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white shadow-xs">
           Y
         </span>
-        <span className="text-base font-bold tracking-wide text-ink">YoungLife</span>
+        <span className="text-base font-bold tracking-tight text-ink">YoungLife</span>
       </div>
 
-      <div className="mx-3 border-t border-canvas-3" />
-
-      {/* 视图切换：竖排，选中钴蓝填充 */}
-      <nav className="px-3 pt-3">
-        <div className="space-y-1">
+      {/* 视图切换 */}
+      <nav className="px-3 pt-1">
+        <div className="space-y-0.5">
           {VIEW_TABS.map((tab) => {
             const active = view === tab.key
             return (
               <button
                 key={tab.key}
                 onClick={() => setView(tab.key)}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                   active
-                    ? 'bg-royal text-white shadow-sm'
-                    : 'text-ink-2 hover:bg-canvas-3/60'
+                    ? 'bg-white text-ink shadow-card ring-1 ring-ink/5'
+                    : 'text-ink-2 hover:bg-white/60 hover:text-ink'
                 }`}
               >
                 {tab.icon}
@@ -104,14 +102,14 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="mx-3 mt-3 border-t border-canvas-3" />
+      <div className="mx-4 mt-3 border-t border-canvas-3/60" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         {/* 清单分组标题 */}
-        <div className="mb-2 flex items-center justify-between px-1">
-          <span className="text-xs font-bold tracking-widest text-ink-3">清单</span>
+        <div className="mb-2 flex items-center justify-between px-2">
+          <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">清单</span>
           <button
-            className="rounded-md p-1 text-ink-3 transition-colors hover:bg-canvas-3 hover:text-ink"
+            className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
             onClick={() => setAddingList(true)}
             aria-label="新建清单"
           >
@@ -121,18 +119,20 @@ export function Sidebar() {
           </button>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {lists.map((list) => {
             const selected = list.id === selectedListId
             return (
               <div
                 key={list.id}
-                className={`group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
-                  selected ? 'bg-royal-50 text-royal-dark' : 'text-ink-2 hover:bg-canvas-3/60'
+                className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-150 ${
+                  selected
+                    ? 'bg-white text-ink font-medium shadow-card ring-1 ring-ink/5'
+                    : 'text-ink-2 hover:bg-white/60 hover:text-ink'
                 }`}
               >
                 <span
-                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${selected ? 'ring-2 ring-royal/30 ring-offset-1 ring-offset-canvas-2' : ''}`}
+                  className="h-3 w-3 shrink-0 rounded-full shadow-sm"
                   style={{ backgroundColor: list.color }}
                 />
                 {renamingId === list.id ? (
@@ -145,20 +145,18 @@ export function Sidebar() {
                       if (e.key === 'Enter') submitRename()
                       if (e.key === 'Escape') setRenamingId(null)
                     }}
-                    className="w-full rounded-md border border-royal bg-canvas px-1.5 py-0.5 text-sm text-ink focus:outline-none"
+                    className="w-full rounded-lg border border-royal bg-canvas px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-royal/20"
                   />
                 ) : (
                   <>
                     <button
-                      className={`flex-1 truncate text-left ${selected ? 'font-semibold' : ''}`}
+                      className="flex-1 truncate text-left"
                       onClick={() => selectList(list.id)}
                     >
                       {list.name}
                     </button>
-                    {/* 选中态左侧钴蓝竖条 */}
-                    {selected && <span className="h-5 w-1 rounded-full bg-royal" />}
                     <button
-                      className="hidden shrink-0 text-xs text-ink-3 hover:text-ink group-hover:block"
+                      className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-ink group-hover:block"
                       onClick={() => {
                         setRenamingId(list.id)
                         setRenameValue(list.name)
@@ -168,7 +166,7 @@ export function Sidebar() {
                       ✎
                     </button>
                     <button
-                      className="hidden shrink-0 text-xs text-ink-3 hover:text-prihigh group-hover:block"
+                      className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-prihigh group-hover:block"
                       onClick={() => {
                         if (window.confirm(`删除清单「${list.name}」及其所有任务？`)) {
                           void deleteList(list.id)
@@ -186,7 +184,7 @@ export function Sidebar() {
         </div>
 
         {addingList && (
-          <div className="mt-2 space-y-2.5 rounded-lg border border-canvas-3 bg-canvas p-2.5 shadow-card">
+          <div className="mt-2 space-y-2.5 rounded-xl border border-canvas-3 bg-white p-3 shadow-card">
             <input
               autoFocus
               value={newListName}
@@ -196,18 +194,18 @@ export function Sidebar() {
                 if (e.key === 'Escape') setAddingList(false)
               }}
               placeholder="清单名称"
-              className="w-full rounded-md border border-canvas-3 bg-canvas px-2 py-1.5 text-sm text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none"
+              className="w-full rounded-lg border border-canvas-3 bg-canvas px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal/20"
             />
             <ColorPicker value={newListColor} onChange={setNewListColor} />
-            <div className="flex justify-end gap-1.5">
+            <div className="flex justify-end gap-2">
               <button
-                className="rounded-md px-2.5 py-1 text-xs text-ink-3 hover:bg-canvas-2"
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-ink-3 hover:bg-canvas-2 transition-colors"
                 onClick={() => setAddingList(false)}
               >
                 取消
               </button>
               <button
-                className="rounded-md bg-royal px-2.5 py-1 text-xs font-medium text-white hover:bg-royal-dark"
+                className="rounded-lg bg-royal px-3 py-1.5 text-xs font-medium text-white hover:bg-royal-dark transition-colors shadow-xs"
                 onClick={submitNewList}
               >
                 创建
@@ -216,52 +214,55 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* 标签分组标题 */}
-        <div className="mb-2 mt-6 flex items-center justify-between border-t border-canvas-3 pt-4 px-1">
-          <span className="text-xs font-bold tracking-widest text-ink-3">标签</span>
-          <button
-            className="rounded-md p-1 text-ink-3 transition-colors hover:bg-canvas-3 hover:text-ink"
-            onClick={() => setAddingTag(true)}
-            aria-label="新建标签"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 px-1">
-          {tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="group inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-white"
-              style={{ backgroundColor: tag.color }}
-            >
-              {tag.name}
+        {/* 标签分组 */}
+        {tags.length > 0 && (
+          <>
+            <div className="mb-2 mt-5 flex items-center justify-between border-t border-canvas-3/60 pt-4 px-2">
+              <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">标签</span>
               <button
-                className="hidden text-white/70 hover:text-white group-hover:inline"
-                onClick={() => void deleteTag(tag.id)}
-                aria-label={`删除标签 ${tag.name}`}
+                className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
+                onClick={() => setAddingTag(true)}
+                aria-label="新建标签"
               >
-                ×
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
               </button>
-            </span>
-          ))}
-          {addingTag && (
-            <input
-              autoFocus
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              onBlur={submitNewTag}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submitNewTag()
-                if (e.key === 'Escape') setAddingTag(false)
-              }}
-              placeholder="标签名"
-              className="w-20 rounded-md border border-canvas-3 bg-canvas px-2 py-0.5 text-xs text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none"
-            />
-          )}
-        </div>
+            </div>
+            <div className="flex flex-wrap gap-1.5 px-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag.id}
+                  className="group inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-white shadow-sm"
+                  style={{ backgroundColor: tag.color }}
+                >
+                  {tag.name}
+                  <button
+                    className="hidden text-white/70 hover:text-white group-hover:inline"
+                    onClick={() => void deleteTag(tag.id)}
+                    aria-label={`删除标签 ${tag.name}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {addingTag && (
+                <input
+                  autoFocus
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onBlur={submitNewTag}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitNewTag()
+                    if (e.key === 'Escape') setAddingTag(false)
+                  }}
+                  placeholder="标签名"
+                  className="w-20 rounded-lg border border-canvas-3 bg-white px-2.5 py-1 text-xs text-ink placeholder:text-ink-4 focus:border-royal focus:outline-none focus:ring-2 focus:ring-royal/20"
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
     </aside>
   )

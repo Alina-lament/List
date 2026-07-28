@@ -23,7 +23,7 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onT
         transform: CSS.Translate.toString(transform),
         borderLeftColor: instance.list_color,
       }}
-      className={`group flex items-center gap-1.5 rounded-md border-l-[3px] bg-canvas-2/70 px-1.5 py-1 text-left text-xs transition-colors hover:bg-canvas-3/60 ${
+      className={`group flex items-center gap-1.5 rounded-lg border-l-[3px] bg-white px-1.5 py-1 text-left text-xs shadow-xs transition-all duration-150 hover:shadow-card ${
         isDragging ? 'opacity-30' : ''
       }`}
     >

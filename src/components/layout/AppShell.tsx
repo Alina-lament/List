@@ -18,8 +18,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         {/* 顶栏：左侧当前视图标题，右侧新建任务 */}
-        <div className="flex items-center justify-between border-b border-canvas-3 bg-canvas px-5 py-3">
-          <h1 className="text-sm font-semibold tracking-wide text-ink-2">{VIEW_TITLE[view]}</h1>
+        <div className="flex items-center justify-between border-b border-canvas-3/70 bg-canvas/80 backdrop-blur-sm px-6 py-3">
+          <h1 className="text-sm font-semibold tracking-tight text-ink">{VIEW_TITLE[view]}</h1>
           <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={!selectedListId}>
             + 新建任务
           </Button>

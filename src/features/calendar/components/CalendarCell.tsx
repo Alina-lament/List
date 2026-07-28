@@ -36,22 +36,22 @@ export const CalendarCell = memo(function CalendarCell({
     <div
       ref={setNodeRef}
       onDoubleClick={() => onCreateAt(date)}
-      className={`min-h-[100px] border-b border-r border-canvas-3 p-1 transition-colors ${
+      className={`min-h-[100px] border-b border-r border-canvas-3/60 p-1.5 transition-all duration-150 ${
         isOver
-          ? 'bg-royal-50 ring-2 ring-inset ring-royal'
+          ? 'bg-royal-50 ring-2 ring-inset ring-royal/40'
           : inMonth
-            ? 'bg-canvas'
-            : 'bg-canvas-2/50'
+            ? 'bg-white hover:bg-canvas-2/50'
+            : 'bg-canvas-2/40'
       }`}
       title="双击新建任务"
     >
       <div className="mb-1 flex justify-end">
         <span
-          className={`flex h-6 w-6 items-center justify-center text-xs transition-colors ${
+          className={`flex h-6 w-6 items-center justify-center text-xs font-bold transition-all ${
             today
-              ? 'rounded-full bg-royal font-bold text-white'
+              ? 'rounded-full bg-royal text-white shadow-sm'
               : inMonth
-                ? 'font-medium text-ink'
+                ? 'font-semibold text-ink'
                 : 'text-ink-4'
           }`}
         >

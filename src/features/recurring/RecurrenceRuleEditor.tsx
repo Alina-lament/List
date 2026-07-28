@@ -116,7 +116,7 @@ export function RecurrenceRuleEditor({
   const preview = value.rrule ? previewRRule(value.rrule, startDate ?? todayKey()) : []
 
   return (
-    <div className="space-y-2.5 rounded-lg border border-canvas-3 bg-canvas-2/40 p-3">
+    <div className="space-y-2.5 rounded-xl border border-canvas-3 bg-canvas-2/50 p-3.5">
       <Field label="重复">
         <Select
           value={freq}
@@ -162,10 +162,10 @@ export function RecurrenceRuleEditor({
                   <button
                     key={d.rrule}
                     type="button"
-                    className={`h-8 w-8 rounded-md text-xs font-semibold transition-colors ${
+                    className={`h-8 w-8 rounded-lg text-xs font-semibold transition-all duration-150 ${
                       active
-                        ? 'bg-royal text-white'
-                        : 'bg-canvas text-ink-2 hover:bg-canvas-3'
+                        ? 'bg-royal text-white shadow-sm'
+                        : 'bg-white text-ink-2 hover:bg-canvas-2 shadow-xs'
                     }`}
                     onClick={() => {
                       const days = active

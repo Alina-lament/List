@@ -4,11 +4,11 @@ import { CSS } from '@dnd-kit/utilities'
 import type { Task } from '@shared/types'
 import { todayKey } from '@/lib/date-utils'
 
-// 优先级三色：亮红（高）/ 亮橙（中）/ 亮绿（低），高对比
+// 优先级三色：现代鲜明色相
 export const PRIORITY_COLORS: Record<number, string> = {
-  1: '#10b981',
+  1: '#22c55e',
   2: '#f59e0b',
-  3: '#ef4444',
+  3: '#f43f5e',
 }
 
 export function PriorityFlag({ priority }: { priority: number }) {
@@ -73,11 +73,11 @@ export const TaskItem = memo(function TaskItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onClick={() => onSelect?.(task.id)}
       onDoubleClick={() => onEdit(task)}
-      className={`group flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-all ${
+      className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-150 ${
         selected
-          ? 'border-royal bg-royal-50 shadow-card'
-          : 'border-canvas-3/70 bg-canvas hover:border-royal/40 hover:shadow-card'
-      } ${isDragging ? 'opacity-40' : ''}`}
+          ? 'border-royal/40 bg-royal-50/80 shadow-card'
+          : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
+      } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >
       {sortable && (
         <span
@@ -113,7 +113,7 @@ export const TaskItem = memo(function TaskItem({
       {task.is_recurring === 1 && <RecurrenceIcon />}
       <PriorityFlag priority={task.priority} />
       {tagNames.map((name) => (
-        <span key={name} className="rounded-md bg-canvas-2 px-1.5 py-0.5 text-[10px] font-medium text-ink-2">
+        <span key={name} className="rounded-lg bg-canvas-2 px-2 py-0.5 text-[10px] font-medium text-ink-2">
           {name}
         </span>
       ))}

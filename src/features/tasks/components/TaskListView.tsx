@@ -63,45 +63,44 @@ export function TaskListView() {
   return (
     <div className="flex h-full w-full">
       {/* 左：任务列表 */}
-      <div className="flex min-w-0 flex-1 flex-col px-6 py-5">
-        {/* 清单标题：色点 + 名称 + 分隔线 */}
-        <div className="mb-4">
-          <h2 className="flex items-center gap-2.5 text-xl font-bold tracking-wide text-ink">
-            <span className="h-3 w-3 rounded-full" style={{ backgroundColor: list.color }} />
+      <div className="flex min-w-0 flex-1 flex-col px-8 py-6">
+        {/* 清单标题 */}
+        <div className="mb-5">
+          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-ink">
+            <span className="h-3.5 w-3.5 rounded-full shadow-sm" style={{ backgroundColor: list.color }} />
             {list.name}
           </h2>
-          <div className="mt-2 border-t border-canvas-3" />
         </div>
 
         <input
           value={quickTitle}
           onChange={(e) => setQuickTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-          placeholder="+ 添加任务，回车创建"
-          className="mb-2.5 w-full rounded-lg border border-canvas-3 bg-canvas-2/50 px-3 py-2 text-sm text-ink placeholder:text-ink-4 focus:border-royal focus:bg-canvas focus:outline-none focus:ring-2 focus:ring-royal/20"
+          placeholder="添加任务，按回车创建…"
+          className="mb-3 w-full rounded-xl border border-canvas-3 bg-canvas-2/50 px-4 py-2.5 text-sm text-ink placeholder:text-ink-4 transition-all duration-150 hover:border-canvas-4 focus:border-royal focus:bg-white focus:outline-none focus:ring-3 focus:ring-royal/20"
         />
 
-        <div className="mb-3 flex items-center gap-2 text-xs">
+        <div className="mb-4 flex items-center gap-2 text-xs">
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(Number(e.target.value) as -1 | 0 | 1 | 2 | 3)}
-            className="rounded-md border border-canvas-3 bg-canvas px-2 py-1 text-xs text-ink-2 focus:border-royal focus:outline-none"
+            className="rounded-lg border border-canvas-3 bg-white px-2.5 py-1.5 text-xs text-ink-2 focus:border-royal focus:outline-none"
           >
             <option value={-1}>全部优先级</option>
-            <option value={3}>高</option>
-            <option value={2}>中</option>
-            <option value={1}>低</option>
+            <option value={3}>🔴 高</option>
+            <option value={2}>🟠 中</option>
+            <option value={1}>🟢 低</option>
             <option value={0}>无</option>
           </select>
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <button
                   key={tag.id}
                   onClick={() => setTagFilter(tagFilter === tag.id ? null : tag.id)}
-                  className={`rounded-md px-2 py-0.5 font-medium transition-colors ${
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all duration-150 ${
                     tagFilter === tag.id
-                      ? 'text-white'
+                      ? 'text-white shadow-sm'
                       : 'bg-canvas-2 text-ink-2 hover:bg-canvas-3'
                   }`}
                   style={tagFilter === tag.id ? { backgroundColor: tag.color } : undefined}
@@ -115,7 +114,7 @@ export function TaskListView() {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <SortableContext items={active.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {active.map((task) => (
                 <TaskItem
                   key={task.id}
@@ -131,18 +130,19 @@ export function TaskListView() {
           </SortableContext>
 
           {active.length === 0 && (
-            <p className="py-10 text-center text-sm text-ink-4">暂无待办任务</p>
+            <p className="py-16 text-center text-sm text-ink-4">✨ 暂无待办任务</p>
           )}
 
           {completed.length > 0 && (
-            <div className="mt-5">
+            <div className="mt-6">
               <button
-                className="mb-2 flex items-center gap-1 text-xs font-medium text-ink-3 hover:text-ink"
+                className="mb-3 flex items-center gap-1.5 text-xs font-medium text-ink-3 hover:text-ink transition-colors"
                 onClick={() => setShowCompleted((v) => !v)}
               >
-                {showCompleted ? '▾' : '▸'} 已完成 {completed.length}
+                <span className={`inline-block transition-transform ${showCompleted ? 'rotate-90' : ''}`}>▸</span>
+                已完成 {completed.length}
               </button>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {showCompleted &&
                   completed.map((task) => (
                     <TaskItem
