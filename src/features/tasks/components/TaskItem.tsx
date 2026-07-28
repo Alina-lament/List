@@ -73,6 +73,7 @@ export const TaskItem = memo(function TaskItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onClick={() => onSelect?.(task.id)}
       onDoubleClick={() => onEdit(task)}
+      onContextMenu={(e) => { e.preventDefault(); onEdit(task) }}
       className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-150 ${
         selected
           ? 'border-royal bg-royal-50 shadow-card'

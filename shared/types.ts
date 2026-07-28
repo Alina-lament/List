@@ -139,4 +139,6 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   bgBlur: '0',
   bgScale: 'cover',
   appIconPath: '',
+  sidebarWidth: '240',
+  detailWidth: '384',
 }

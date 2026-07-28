@@ -6,9 +6,10 @@ import { useSettingsStore } from '../store'
 import { ColorSettingRow } from './ColorSettingRow'
 import { api } from '@/lib/api'
 
-type TabKey = 'colors' | 'background' | 'icons'
+type TabKey = 'quick' | 'colors' | 'background' | 'icons'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
+  { key: 'quick', label: '快捷设置', icon: '⚡' },
   { key: 'colors', label: '主题颜色', icon: '🎨' },
   { key: 'background', label: '背景图片', icon: '🖼️' },
   { key: 'icons', label: '图标设置', icon: '⭐' },
@@ -38,13 +39,13 @@ interface SettingsDialogProps {
 
 export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const store = useSettingsStore()
-  const [tab, setTab] = useState<TabKey>('colors')
+  const [tab, setTab] = useState<TabKey>('quick')
   const [icons, setIcons] = useState<string[]>([])
   const [previewBg, setPreviewBg] = useState<string | null>(null)
 
-  // 打开时同步状态并加载图标列表
   useEffect(() => {
     if (!open) return
+    setTab('quick')
     setPreviewBg(store.bgImagePath)
     void loadIcons()
   }, [open])
@@ -94,9 +95,9 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       </div>
 
       {/* 标签页内容 */}
-      {tab === 'colors' && (
-        <ColorsTab store={store} />
-      )}
+      {tab === 'quick' && <QuickTab />}
+
+      {tab === 'colors' && <ColorsTab store={store} />}
 
       {tab === 'background' && (
         <BackgroundTab
@@ -116,6 +117,48 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         />
       )}
     </Modal>
+  )
+}
+
+// ── 快捷设置标签页（快捷键）──
+function QuickTab() {
+  const SHORTCUTS = [
+    { keys: 'Ctrl + 1', desc: '高优先级', color: '#f43f5e' },
+    { keys: 'Ctrl + 2', desc: '中优先级', color: '#f59e0b' },
+    { keys: 'Ctrl + 3', desc: '低优先级', color: '#22c55e' },
+    { keys: 'Ctrl + 4', desc: '无优先级', color: '#94a3b8' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase">任务优先级</h3>
+        <p className="mb-3 text-xs text-ink-4">选中任务后，使用快捷键快速设置优先级</p>
+        <div className="space-y-1.5">
+          {SHORTCUTS.map((s) => (
+            <div
+              key={s.keys}
+              className="flex items-center gap-3 rounded-xl border border-canvas-3 bg-white px-4 py-3"
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: s.color }}
+              />
+              <span className="flex-1 text-sm font-medium text-ink">{s.desc}</span>
+              <kbd className="rounded-lg bg-canvas-2 px-2.5 py-1 text-xs font-mono font-semibold text-ink-2 shadow-xs ring-1 ring-ink/5">
+                {s.keys}
+              </kbd>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-canvas-3 pt-4">
+        <p className="text-xs text-ink-4">
+          更多快捷键功能即将推出
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -185,7 +228,6 @@ function BackgroundTab({
 
   return (
     <div className="space-y-4">
-      {/* 选择按钮 */}
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={onSelectImage}>
           选择图片
@@ -197,7 +239,6 @@ function BackgroundTab({
         )}
       </div>
 
-      {/* 预览 */}
       {previewBg && (
         <div className="overflow-hidden rounded-xl border border-canvas-3">
           <div
@@ -213,7 +254,6 @@ function BackgroundTab({
         </div>
       )}
 
-      {/* 调节滑块 */}
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink-2">
@@ -270,6 +310,32 @@ function BackgroundTab({
   )
 }
 
+// ── 当前图标显示 ──
+function CurrentIconDisplay({ iconPath }: { iconPath: string }) {
+  const [dataUrl, setDataUrl] = useState('')
+  const fileName = iconPath.split(/[\\/]/).pop() ?? ''
+
+  useEffect(() => {
+    void api.getIconDataUrl(fileName).then(setDataUrl)
+  }, [iconPath, fileName])
+
+  return (
+    <div className="flex items-center gap-3 text-sm text-ink-2">
+      <span className="shrink-0">当前：</span>
+      {dataUrl ? (
+        <img
+          src={dataUrl}
+          alt="当前图标"
+          className="h-8 w-8 rounded-lg object-contain ring-1 ring-ink/5"
+        />
+      ) : (
+        <span className="text-lg">🖼️</span>
+      )}
+      <span className="font-medium text-ink">{fileName}</span>
+    </div>
+  )
+}
+
 // ── 图标设置标签页 ──
 function IconsTab({
   store,
@@ -283,10 +349,27 @@ function IconsTab({
   onRefresh: () => void
 }) {
   const [icoFolder, setIcoFolder] = useState('')
+  const [iconDataUrls, setIconDataUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
     void api.getIconsFolder().then(setIcoFolder)
   }, [])
+
+  useEffect(() => {
+    // 加载所有图标的数据 URL
+    void Promise.all(
+      icons.map(async (file) => {
+        const url = await api.getIconDataUrl(file)
+        return { file, url }
+      }),
+    ).then((results) => {
+      const map: Record<string, string> = {}
+      for (const { file, url } of results) {
+        if (url) map[file] = url
+      }
+      setIconDataUrls(map)
+    })
+  }, [icons])
 
   return (
     <div className="space-y-4">
@@ -307,32 +390,32 @@ function IconsTab({
       </p>
 
       {store.appIconPath && (
-        <div className="flex items-center gap-2 text-sm text-ink-2">
-          <span>当前：</span>
-          <span className="font-medium text-ink">{store.appIconPath.split(/[\\/]/).pop()}</span>
-        </div>
+        <CurrentIconDisplay iconPath={store.appIconPath} />
       )}
 
       {icons.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink-4">暂无图标文件，请将图标放入上述文件夹后刷新</p>
       ) : (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {icons.map((file) => {
             const selected = store.appIconPath?.endsWith(file)
+            const dataUrl = iconDataUrls[file]
             return (
               <button
                 key={file}
                 onClick={() => onSelectIcon(file)}
-                className={`flex flex-col items-center gap-1 rounded-xl border p-3 transition-all hover:shadow-card ${
+                title={file}
+                className={`flex items-center justify-center rounded-xl border p-3 transition-all hover:shadow-card ${
                   selected
                     ? 'border-royal bg-royal-50 ring-2 ring-royal-50/50'
                     : 'border-canvas-3 hover:border-canvas-4'
                 }`}
               >
-                <span className="text-2xl">🖼️</span>
-                <span className="truncate text-center text-[10px] font-medium text-ink-2">
-                  {file}
-                </span>
+                {dataUrl ? (
+                  <img src={dataUrl} alt={file} className="h-10 w-10 object-contain" />
+                ) : (
+                  <span className="h-10 w-10 flex items-center justify-center text-lg">🖼️</span>
+                )}
               </button>
             )
           })}

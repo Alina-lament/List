@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTasksStore } from '../store'
-import { Button } from '@/components/ui/Button'
-import { Field, Input, Select, Textarea } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { RecurrenceRuleEditor, type RecurrenceValue } from '@/features/recurring/RecurrenceRuleEditor'
-import { PriorityFlag } from './TaskItem'
+import { PRIORITY_COLORS } from './TaskItem'
+import { parseDateKey, todayKey } from '@/lib/date-utils'
+import { useLayoutStore } from '@/components/layout/layoutStore'
 
 const PRIORITY_OPTIONS = [
   { value: 0, label: '无优先级' },
   { value: 1, label: '低' },
   { value: 2, label: '中' },
   { value: 3, label: '高' },
-]
+] as const
 
 const REMINDER_OPTIONS = [
   { value: '', label: '不提醒' },
@@ -22,9 +23,25 @@ const REMINDER_OPTIONS = [
   { value: '1440', label: '提前 1 天' },
 ]
 
-const PRIORITY_LABEL: Record<number, string> = { 0: '无优先级', 1: '低', 2: '中', 3: '高' }
+type PanelKind = 'date' | 'priority' | 'list' | 'menu' | 'more'
 
-/** 单个任务详情面板：就地编辑当前选中的任务内容 */
+function FlagIcon({ priority, size = 16 }: { priority: number; size?: number }) {
+  const color = PRIORITY_COLORS[priority]
+  if (!color) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="text-ink-4">
+        <path d="M6 3a1 1 0 0 0-1 1v17M7 5h10.382a1 1 0 0 1 .894 1.447L16.618 10l1.658 3.553A1 1 0 0 1 17.382 15H7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <path d="M6 3a1 1 0 0 0-1 1v17a1 1 0 1 0 2 0v-6h10.382a1 1 0 0 0 .894-1.447L16.618 10l1.658-3.553A1 1 0 0 0 17.382 5H7V4a1 1 0 0 0-1-1z" />
+    </svg>
+  )
+}
+
+/** 单个任务详情面板 */
 export function TaskDetailPanel() {
   const {
     tasksByList,
@@ -44,33 +61,47 @@ export function TaskDetailPanel() {
     return (tasksByList[selectedListId] ?? []).find((t) => t.id === selectedTaskId) ?? null
   }, [tasksByList, selectedListId, selectedTaskId])
 
+  const parentTask = useMemo(() => {
+    if (!task?.parent_task_id) return null
+    return (tasksByList[task.list_id] ?? []).find((t) => t.id === task.parent_task_id) ?? null
+  }, [tasksByList, task])
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [listId, setListId] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
   const [priority, setPriority] = useState<0 | 1 | 2 | 3>(0)
   const [reminder, setReminder] = useState('')
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({ rrule: null, rrule_end_date: null })
   const [tagIds, setTagIds] = useState<string[]>([])
+  const [panel, setPanel] = useState<PanelKind | null>(null)
+  const detailWidth = useLayoutStore((s) => s.detailWidth)
 
-  // 任务切换时同步本地编辑态
   useEffect(() => {
     if (!task) return
     setTitle(task.title)
     setDescription(task.description)
-    setListId(task.list_id)
     setDueDate(task.due_date ?? '')
     setDueTime(task.due_time ?? '')
     setPriority(task.priority)
     setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
     setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
     setTagIds(taskTags[task.id] ?? [])
-  }, [task?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+    setPanel(null)
+  }, [task?.id, task?.updated_at, taskTags[task?.id ?? '']?.join(',')])
+
+  const overdueDays = useMemo(() => {
+    if (!task?.due_date || task.is_completed) return 0
+    const diff = parseDateKey(todayKey()).getTime() - parseDateKey(task.due_date).getTime()
+    return diff > 0 ? Math.round(diff / 86400000) : 0
+  }, [task?.due_date, task?.is_completed])
 
   if (!task) {
     return (
-      <aside className="flex w-80 shrink-0 flex-col items-center justify-center border-l border-canvas-3 bg-canvas-2 px-6 text-center">
+      <aside
+        className="flex shrink-0 flex-col items-center justify-center bg-canvas-2 px-6 text-center"
+        style={{ width: detailWidth }}
+      >
         <div className="mb-4 rounded-2xl bg-white p-4 shadow-xs ring-1 ring-ink/5">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-3">
             <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" strokeLinejoin="round" />
@@ -93,28 +124,160 @@ export function TaskDetailPanel() {
     await deleteTask(task.id, task.list_id)
   }
 
-  const listColor = lists.find((l) => l.id === listId)?.color ?? '#64748b'
+  const listName = lists.find((l) => l.id === task.list_id)?.name ?? ''
+  const completed = Boolean(task.is_completed)
+
+  const dateLabel = (() => {
+    if (!dueDate) return ''
+    const [, m, d] = dueDate.split('-').map(Number)
+    let s = `${m}月${d}日`
+    if (dueTime) s += `, ${dueTime.slice(0, 5)}`
+    if (overdueDays > 0) s += `, 已延期${overdueDays}天`
+    return s
+  })()
+
+  function togglePanel(kind: PanelKind) {
+    setPanel((p) => (p === kind ? null : kind))
+  }
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-canvas-3 bg-canvas-2">
-      {/* 头部：所属清单色条 + 标题输入 + 完成勾选 */}
-      <div className="border-b border-canvas-3 px-5 py-5">
-        <div className="mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-2 text-xs font-medium text-ink-3">
-            <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: listColor }} />
-            {lists.find((l) => l.id === listId)?.name ?? '清单'}
-          </span>
+    <aside className="relative flex min-w-0 shrink-0 flex-col bg-white" style={{ width: detailWidth }}>
+      {panel && <div className="fixed inset-0 z-10" onClick={() => setPanel(null)} />}
+
+      {/* ====== 顶部：完成按钮 + 日期 + 优先级旗帜 ====== */}
+      <div className="flex items-center gap-3 px-5 pt-5">
+        {/* 完成按钮：黄色圆角方框，完成后变灰打勾 */}
+        <button
+          onClick={() => toggleTask(task)}
+          aria-label={completed ? '撤销完成' : '标记完成'}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border-2 transition-all duration-150 ${
+            completed
+              ? 'border-ink-4 bg-ink-4'
+              : 'border-[#f5b73c] hover:bg-[#f5b73c]/15'
+          }`}
+        >
+          {completed && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
+              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+
+        {/* 日期：红色字体（过期时），点击修改 */}
+        <div className="relative min-w-0 flex-1">
           <button
-            onClick={() => toggleTask(task)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
-              task.is_completed
-                ? 'bg-royal-50 text-royal-dark'
-                : 'bg-white text-ink-2 shadow-xs ring-1 ring-ink/5 hover:bg-canvas-2'
+            onClick={() => togglePanel('date')}
+            className={`flex max-w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-[13px] transition-colors hover:bg-canvas-2 ${
+              overdueDays > 0 ? 'font-medium text-prihigh' : dueDate ? 'text-ink-2' : 'text-ink-4'
             }`}
           >
-            {task.is_completed ? '✓ 已完成' : '标记完成'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" />
+            </svg>
+            <span className="truncate">{dateLabel || '设置日期'}</span>
           </button>
+
+          {panel === 'date' && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-xl border border-canvas-3 bg-white p-3 shadow-card-xl">
+              <div className="space-y-2">
+                <Input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => {
+                    setDueDate(e.target.value)
+                    void commit({ due_date: e.target.value || null })
+                  }}
+                />
+                <Input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => {
+                    setDueTime(e.target.value)
+                    void commit({ due_time: e.target.value || null })
+                  }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between">
+                <button
+                  onClick={() => {
+                    setDueDate('')
+                    setDueTime('')
+                    void commit({ due_date: null, due_time: null })
+                    setPanel(null)
+                  }}
+                  className="rounded-lg px-2 py-1 text-xs text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh"
+                >
+                  清除日期
+                </button>
+                <button
+                  onClick={() => setPanel(null)}
+                  className="rounded-lg bg-royal px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-royal-dark"
+                >
+                  完成
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* 优先级旗帜 */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => togglePanel('priority')}
+            aria-label="设置优先级"
+            className="rounded-lg p-1 transition-colors hover:bg-canvas-2"
+          >
+            <FlagIcon priority={priority} size={17} />
+          </button>
+
+          {panel === 'priority' && (
+            <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+              {PRIORITY_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => {
+                    setPriority(o.value)
+                    void commit({ priority: o.value })
+                    setPanel(null)
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                    priority === o.value ? 'font-medium text-royal' : 'text-ink-2'
+                  }`}
+                >
+                  <FlagIcon priority={o.value} size={14} />
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ====== 主任务（父任务） ====== */}
+      <div className="mt-4 px-5">
+        {parentTask ? (
+          <button
+            onClick={() => selectTask(parentTask.id)}
+            className="group flex max-w-full items-center gap-0.5 text-[13px] text-ink-3 transition-colors hover:text-royal"
+          >
+            <span className="truncate" style={{ maxWidth: detailWidth - 100 }}>{parentTask.title}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : (
+          <span className="flex max-w-full items-center gap-0.5 text-[13px] text-ink-3">
+            <span className="truncate" style={{ maxWidth: detailWidth - 100 }}>{listName}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        )}
+      </div>
+
+      {/* ====== 任务标题 + 菜单 ====== */}
+      <div className="mt-1 flex items-start gap-2 px-5">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -122,162 +285,178 @@ export function TaskDetailPanel() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
           }}
-          className={`w-full bg-transparent text-lg font-bold text-ink focus:outline-none ${
-            task.is_completed ? 'text-ink-4 line-through' : ''
+          className={`min-w-0 flex-1 bg-transparent text-lg font-bold text-ink placeholder:text-ink-4 focus:outline-none ${
+            completed ? 'text-ink-4 line-through' : ''
           }`}
+          placeholder="任务名称"
+        />
+        <div className="relative shrink-0">
+          <button
+            onClick={() => togglePanel('menu')}
+            aria-label="更多操作"
+            className="rounded-lg p-1 text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 6h16M4 12h16M4 18h10" strokeLinecap="round" />
+            </svg>
+          </button>
+
+          {panel === 'menu' && (
+            <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+              <button
+                onClick={() => {
+                  setPanel(null)
+                  void handleDelete()
+                }}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-[13px] text-prihigh transition-colors hover:bg-red-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                删除任务
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ====== 中部：描述 ====== */}
+      <div className="mt-3 flex-1 overflow-y-auto px-5">
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onBlur={() => description !== task.description && commit({ description })}
+          placeholder="添加描述…"
+          className="h-full min-h-[120px] w-full resize-none bg-transparent text-sm leading-relaxed text-ink-2 placeholder:text-ink-4 focus:outline-none"
         />
       </div>
 
-      <div className="flex-1 space-y-4 px-5 py-4">
-        <Field label="描述">
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={() => description !== task.description && commit({ description })}
-            placeholder="添加备注…"
-          />
-        </Field>
-
-        <Field label="所属清单">
-          <Select
-            value={listId}
-            onChange={(e) => {
-              const v = e.target.value
-              setListId(v)
-              void commit({ list_id: v })
-            }}
+      {/* ====== 底部栏：所属清单 + 更多设置 ====== */}
+      <div className="relative flex items-center justify-between border-t border-canvas-3 px-5 py-3">
+        <div className="relative">
+          <button
+            onClick={() => togglePanel('list')}
+            className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[13px] text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink-2"
           >
-            {lists.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
+              <path d="M8 10h8M8 14h5" strokeLinecap="round" />
+            </svg>
+            <span className="truncate" style={{ maxWidth: Math.max(72, detailWidth - 200) }}>{listName}</span>
+          </button>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="日期">
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              onBlur={() => {
-                const v = dueDate || null
-                if (v !== task.due_date) void commit({ due_date: v })
-              }}
-            />
-          </Field>
-          <Field label="时间">
-            <Input
-              type="time"
-              value={dueTime}
-              onChange={(e) => setDueTime(e.target.value)}
-              onBlur={() => {
-                const v = dueTime || null
-                if (v !== task.due_time) void commit({ due_time: v })
-              }}
-            />
-          </Field>
-        </div>
-
-        <Field label="优先级">
-          <Select
-            value={priority}
-            onChange={(e) => {
-              const v = Number(e.target.value) as 0 | 1 | 2 | 3
-              setPriority(v)
-              void commit({ priority: v })
-            }}
-          >
-            {PRIORITY_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-3">
-            <PriorityFlag priority={priority} />
-            当前：{PRIORITY_LABEL[priority]}
-          </div>
-        </Field>
-
-        <Field label="提醒">
-          <Select
-            value={reminder}
-            onChange={(e) => {
-              const v = e.target.value
-              setReminder(v)
-              void commit({ reminder_minutes: v === '' ? null : Number(v) })
-            }}
-          >
-            {REMINDER_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <div>
-          <span className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-3">重复</span>
-          <RecurrenceRuleEditor
-            value={recurrence}
-            onChange={(v) => {
-              setRecurrence(v)
-              void commit({
-                is_recurring: (v.rrule ? 1 : 0) as 0 | 1,
-                rrule: v.rrule,
-                rrule_end_date: v.rrule_end_date,
-              })
-            }}
-            startDate={dueDate || null}
-          />
-        </div>
-
-        {tags.length > 0 && (
-          <div>
-            <span className="mb-1.5 block text-xs font-semibold tracking-wide text-ink-3">标签</span>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => {
-                const active = tagIds.includes(tag.id)
-                return (
-                  <button
-                    key={tag.id}
-                    onClick={() => {
-                      const next = active
-                        ? tagIds.filter((x) => x !== tag.id)
-                        : [...tagIds, tag.id]
-                      setTagIds(next)
-                      void commit({ tag_ids: next })
-                    }}
-                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-150 ${
-                      active ? 'border-transparent text-white shadow-sm' : 'hover:bg-canvas-2'
-                    }`}
-                    style={
-                      active
-                        ? { backgroundColor: tag.color }
-                        : { borderColor: tag.color, color: tag.color }
-                    }
-                  >
-                    {tag.name}
-                  </button>
-                )
-              })}
+          {panel === 'list' && (
+            <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-44 overflow-y-auto rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+              {lists.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    void commit({ list_id: l.id })
+                    setPanel(null)
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                    l.id === task.list_id ? 'font-medium text-royal' : 'text-ink-2'
+                  }`}
+                >
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: l.color }} />
+                  <span className="truncate">{l.name}</span>
+                </button>
+              ))}
             </div>
-          </div>
-        )}
-
-        <div className="border-t border-canvas-3 pt-3 text-[11px] text-ink-4">
-          创建于 {task.created_at.slice(0, 10)}
-          {task.updated_at !== task.created_at && ` · 更新于 ${task.updated_at.slice(0, 10)}`}
+          )}
         </div>
-      </div>
 
-      {/* 底部：删除 */}
-      <div className="border-t border-canvas-3 px-5 py-4">
-        <Button variant="danger" size="sm" onClick={handleDelete} className="w-full">
-          删除任务
-        </Button>
+        <div className="relative">
+          <button
+            onClick={() => togglePanel('more')}
+            aria-label="更多设置"
+            className={`rounded-lg p-1 transition-colors hover:bg-canvas-2 ${
+              reminder || recurrence.rrule || tagIds.length > 0 ? 'text-royal' : 'text-ink-3'
+            }`}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="5" cy="12" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="19" cy="12" r="1.8" />
+            </svg>
+          </button>
+
+          {panel === 'more' && (
+            <div className="absolute bottom-full right-0 z-20 mb-1 w-72 rounded-xl border border-canvas-3 bg-white p-4 shadow-card-xl">
+              <div className="space-y-3">
+                {/* 提醒 */}
+                <div>
+                  <label className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">提醒</label>
+                  <Select
+                    value={reminder}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setReminder(v)
+                      void commit({ reminder_minutes: v === '' ? null : Number(v) })
+                    }}
+                  >
+                    {REMINDER_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* 重复 */}
+                <div>
+                  <span className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">重复</span>
+                  <RecurrenceRuleEditor
+                    value={recurrence}
+                    onChange={(v) => {
+                      setRecurrence(v)
+                      void commit({
+                        is_recurring: (v.rrule ? 1 : 0) as 0 | 1,
+                        rrule: v.rrule,
+                        rrule_end_date: v.rrule_end_date,
+                      })
+                    }}
+                    startDate={dueDate || null}
+                  />
+                </div>
+
+                {/* 标签 */}
+                {tags.length > 0 && (
+                  <div>
+                    <span className="mb-1 block text-[11px] font-semibold tracking-wide text-ink-3">标签</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tags.map((tag) => {
+                        const active = tagIds.includes(tag.id)
+                        return (
+                          <button
+                            key={tag.id}
+                            onClick={() => {
+                              const next = active
+                                ? tagIds.filter((x) => x !== tag.id)
+                                : [...tagIds, tag.id]
+                              setTagIds(next)
+                              void commit({ tag_ids: next })
+                            }}
+                            className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-all duration-150 ${
+                              active ? 'border-transparent text-white shadow-sm' : 'hover:bg-canvas-2'
+                            }`}
+                            style={
+                              active
+                                ? { backgroundColor: tag.color }
+                                : { borderColor: tag.color, color: tag.color }
+                            }
+                          >
+                            {tag.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   )

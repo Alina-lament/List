@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useTasksStore, type ViewMode } from '@/features/tasks/store'
 import { ColorPicker } from '@/components/ui/ColorPicker'
+import { SettingsDialog } from '@/features/settings/components/SettingsDialog'
+import { useLayoutStore } from './layoutStore'
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
   {
@@ -46,6 +48,9 @@ export function Sidebar() {
   const [renameValue, setRenameValue] = useState('')
   const [addingTag, setAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
+  const narrow = sidebarWidth < 210
 
   async function submitNewList() {
     const name = newListName.trim()
@@ -70,13 +75,16 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-canvas-3 bg-canvas-2 backdrop-blur-sm">
+    <aside
+      className="flex min-w-0 shrink-0 flex-col bg-canvas-2 backdrop-blur-sm"
+      style={{ width: sidebarWidth }}
+    >
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 py-4">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white shadow-xs">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-royal to-royal-dark text-base font-bold text-white shadow-xs">
           Y
         </span>
-        <span className="text-base font-bold tracking-tight text-ink">YoungLife</span>
+        {!narrow && <span className="truncate text-base font-bold tracking-tight text-ink">YoungLife</span>}
       </div>
 
       {/* 视图切换 */}
@@ -105,9 +113,7 @@ export function Sidebar() {
       <div className="mx-4 mt-3 border-t border-canvas-3" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        {/* 清单分组标题 */}
-        <div className="mb-2 flex items-center justify-between px-2">
-          <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">清单</span>
+        <div className="mb-2 flex items-center justify-end px-2">
           <button
             className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
             onClick={() => setAddingList(true)}
@@ -217,7 +223,7 @@ export function Sidebar() {
         {/* 标签分组 */}
         {tags.length > 0 && (
           <>
-            <div className="mb-2 mt-5 flex items-center justify-between border-t border-canvas-3 pt-4 px-2">
+            <div className="mb-2 mt-5 flex items-center justify-end border-t border-canvas-3 pt-4 px-2">
               <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">标签</span>
               <button
                 className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
@@ -264,6 +270,26 @@ export function Sidebar() {
           </>
         )}
       </div>
+
+      {/* 底部设置按钮 */}
+      <div className="border-t border-canvas-3 px-3 py-2.5">
+        <button
+          onClick={() => setShowSettings(true)}
+          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-2 transition-all duration-150 hover:bg-white/60 hover:text-ink"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+              strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          设置
+        </button>
+      </div>
+
+      <SettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </aside>
   )
 }

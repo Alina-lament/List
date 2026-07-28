@@ -6,7 +6,7 @@ import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { join } from 'path'
-import { readdirSync, copyFileSync, existsSync, mkdirSync } from 'fs'
+import { readdirSync, readFileSync, copyFileSync, existsSync, mkdirSync } from 'fs'
 
 export interface Repositories {
   tasks: TaskRepository
@@ -97,6 +97,15 @@ export function registerIpcHandlers(repos: Repositories): void {
       const img = nativeImage.createFromPath(iconPath)
       win.setIcon(img)
     }
+  })
+
+  ipcMain.handle(IpcChannels.iconsGetDataUrl, (_e, fileName: string) => {
+    const filePath = join(iconsDir, fileName)
+    if (!existsSync(filePath)) return ''
+    const buf = readFileSync(filePath)
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? 'png'
+    const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
   })
 
   // ── Background image ──

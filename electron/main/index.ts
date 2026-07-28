@@ -46,11 +46,6 @@ app.whenReady().then(() => {
   const tags = createTagRepository(db)
   const settings = createSettingsRepository(db)
 
-  // 首次运行：播种一个默认清单
-  if (lists.getAll().length === 0) {
-    lists.create('默认清单')
-  }
-
   registerIpcHandlers({ tasks, lists, tags, settings })
   startReminderScheduler(tasks)
 

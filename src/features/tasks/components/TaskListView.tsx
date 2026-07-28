@@ -5,6 +5,8 @@ import { useTasksStore } from '../store'
 import { TaskItem } from './TaskItem'
 import { TaskFormDialog } from './TaskFormDialog'
 import { TaskDetailPanel } from './TaskDetailPanel'
+import { ResizeHandle } from '@/components/layout/ResizeHandle'
+import { DETAIL_WIDTH, useLayoutStore } from '@/components/layout/layoutStore'
 
 export function TaskListView() {
   const {
@@ -23,6 +25,7 @@ export function TaskListView() {
   const [showCompleted, setShowCompleted] = useState(false)
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const { detailWidth, setDetailWidth, saveDetailWidth } = useLayoutStore()
 
   const list = lists.find((l) => l.id === selectedListId)
   const tasks = useMemo(() => {
@@ -64,14 +67,6 @@ export function TaskListView() {
     <div className="flex h-full w-full">
       {/* 左：任务列表 */}
       <div className="flex min-w-0 flex-1 flex-col px-8 py-6">
-        {/* 清单标题 */}
-        <div className="mb-5">
-          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-ink">
-            <span className="h-3.5 w-3.5 rounded-full shadow-sm" style={{ backgroundColor: list.color }} />
-            {list.name}
-          </h2>
-        </div>
-
         <input
           value={quickTitle}
           onChange={(e) => setQuickTitle(e.target.value)}
@@ -162,7 +157,16 @@ export function TaskListView() {
         </div>
       </div>
 
-      {/* 右：单任务详情面板 */}
+      {/* 右：单任务详情面板（可拖拽调节宽度） */}
+      <ResizeHandle
+        direction="left"
+        width={detailWidth}
+        min={DETAIL_WIDTH.min}
+        max={DETAIL_WIDTH.max}
+        defaultWidth={DETAIL_WIDTH.default}
+        onChange={setDetailWidth}
+        onCommit={(w) => void saveDetailWidth(w)}
+      />
       <TaskDetailPanel />
 
 

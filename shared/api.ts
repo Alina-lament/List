@@ -48,6 +48,7 @@ export interface Api {
   listIcons(): Promise<string[]>
   openIconsFolder(): Promise<void>
   setWindowIcon(iconPath: string): Promise<void>
+  getIconDataUrl(fileName: string): Promise<string>
 
   // Background image
   setBgImage(filePath: string): Promise<string>

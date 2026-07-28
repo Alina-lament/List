@@ -47,6 +47,7 @@ const api: Api = {
   listIcons: () => ipcRenderer.invoke(IpcChannels.iconsList),
   openIconsFolder: () => ipcRenderer.invoke(IpcChannels.iconsOpenFolder),
   setWindowIcon: (iconPath) => ipcRenderer.invoke(IpcChannels.iconsSetApp, iconPath),
+  getIconDataUrl: (fileName) => ipcRenderer.invoke(IpcChannels.iconsGetDataUrl, fileName),
 
   // Background image
   setBgImage: (filePath) => ipcRenderer.invoke(IpcChannels.bgSetImage, filePath),

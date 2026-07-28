@@ -34,6 +34,7 @@ export const IpcChannels = {
   iconsList: 'icons:list',
   iconsOpenFolder: 'icons:openFolder',
   iconsSetApp: 'icons:setApp',
+  iconsGetDataUrl: 'icons:getDataUrl',
 
   // background image
   bgSetImage: 'bg:setImage',
