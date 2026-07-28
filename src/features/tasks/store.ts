@@ -186,7 +186,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       rrule_end_date: input.rrule_end_date ?? null,
       reminder_minutes: input.reminder_minutes ?? null,
       last_reminded_at: null,
-      parent_task_id: null,
+      parent_task_id: input.parent_task_id ?? null,
       created_at: now,
       updated_at: now,
     }

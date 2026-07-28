@@ -65,6 +65,7 @@ export interface CreateTaskInput {
   rrule?: string | null
   rrule_end_date?: string | null
   reminder_minutes?: number | null
+  parent_task_id?: string | null
   tag_ids?: string[]
 }
 

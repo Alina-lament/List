@@ -41,6 +41,7 @@ const UPDATABLE_FIELDS = [
   'rrule',
   'rrule_end_date',
   'reminder_minutes',
+  'parent_task_id',
 ] as const
 
 export function createTaskRepository(db: AppDatabase): TaskRepository {
@@ -110,7 +111,7 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
              id, list_id, title, description, is_completed, due_date, due_time,
              priority, sort_order, is_recurring, rrule, rrule_end_date,
              reminder_minutes, last_reminded_at, parent_task_id, created_at, updated_at
-           ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)`,
+           ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
         ).run(
           id,
           input.list_id,
@@ -124,6 +125,7 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
           input.rrule ?? null,
           input.rrule_end_date ?? null,
           input.reminder_minutes ?? null,
+          input.parent_task_id ?? null,
           now,
           now,
         )

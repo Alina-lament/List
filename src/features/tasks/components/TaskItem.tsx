@@ -46,11 +46,14 @@ interface TaskItemProps {
   onToggle: (task: Task) => void
   onEdit: (task: Task) => void
   onSelect?: (id: string) => void
+  onContextMenu?: (e: React.MouseEvent, task: Task) => void
   sortable?: boolean
   variant?: 'default' | 'overdue'
   /** 全清单视图时显示清单信息 */
   listColor?: string
   listName?: string
+  /** 子任务样式 */
+  isSubtask?: boolean
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -60,10 +63,12 @@ export const TaskItem = memo(function TaskItem({
   onToggle,
   onEdit,
   onSelect,
+  onContextMenu,
   sortable = true,
   variant = 'default',
   listColor,
   listName,
+  isSubtask = false,
 }: TaskItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `task:${task.id}`,
@@ -82,16 +87,20 @@ export const TaskItem = memo(function TaskItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       onClick={() => onSelect?.(task.id)}
       onDoubleClick={() => onEdit(task)}
-      onContextMenu={(e) => { e.preventDefault(); onEdit(task) }}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(e, task) }}
       className={`group flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-all duration-150 ${
+        isSubtask ? 'ml-8' : ''
+      } ${
         selected
           ? 'border-royal bg-royal-50 shadow-card'
           : isOverdue
             ? 'border-l-[3px] border-l-prihigh border-transparent bg-red-50/40 hover:border-canvas-3 hover:border-l-prihigh'
-            : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
+            : isSubtask
+              ? 'border-transparent bg-canvas-2 hover:border-canvas-3'
+              : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
       } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >
-      {sortable && (
+      {sortable && !isSubtask && (
         <span
           {...attributes}
           {...listeners}
@@ -123,7 +132,7 @@ export const TaskItem = memo(function TaskItem({
         />
       )}
       <span
-        className={`flex-1 truncate text-left text-sm ${
+        className={`flex-1 truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
           completed ? 'text-ink-4 line-through' : 'text-ink'
         }`}
       >

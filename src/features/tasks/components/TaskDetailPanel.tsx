@@ -24,7 +24,7 @@ const REMINDER_OPTIONS = [
   { value: '1440', label: '提前 1 天' },
 ]
 
-type PanelKind = 'date' | 'priority' | 'more' | 'breadcrumb'
+type PanelKind = 'date' | 'priority' | 'more' | 'breadcrumb' | 'subtask'
 
 function FlagIcon({ priority, size = 16 }: { priority: number; size?: number }) {
   const color = PRIORITY_COLORS[priority]
@@ -53,6 +53,7 @@ export function TaskDetailPanel() {
     taskTags,
     updateTask,
     deleteTask,
+    createTask,
     toggleTask,
     selectTask,
   } = useTasksStore()
@@ -75,6 +76,22 @@ export function TaskDetailPanel() {
     return (tasksByList[task.list_id] ?? []).find((t) => t.id === task.parent_task_id) ?? null
   }, [tasksByList, task])
 
+  const subtasks = useMemo(() => {
+    if (!task) return []
+    return (tasksByList[task.list_id] ?? []).filter((t) => t.parent_task_id === task.id)
+  }, [tasksByList, task])
+
+  async function handleAddSubtask() {
+    const title = subtaskTitle.trim()
+    if (!title || !task) return
+    setSubtaskTitle('')
+    await createTask({
+      list_id: task.list_id,
+      title,
+      parent_task_id: task.id,
+    })
+  }
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -86,6 +103,7 @@ export function TaskDetailPanel() {
   const [panel, setPanel] = useState<PanelKind | null>(null)
   const [timePanel, setTimePanel] = useState<'hour' | 'min' | null>(null)
   const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
+  const [subtaskTitle, setSubtaskTitle] = useState('')
   const detailWidth = useLayoutStore((s) => s.detailWidth)
 
   useEffect(() => {
@@ -98,6 +116,7 @@ export function TaskDetailPanel() {
     setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
     setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
     setTagIds(taskTags[task.id] ?? [])
+    setSubtaskTitle('')
     setPanel(null)
   }, [task?.id, task?.updated_at, taskTags[task?.id ?? '']?.join(',')])
 
@@ -409,6 +428,95 @@ export function TaskDetailPanel() {
           placeholder="添加描述…"
           className="h-full min-h-[120px] w-full resize-none bg-transparent text-sm leading-relaxed text-ink-2 placeholder:text-ink-4 focus:outline-none"
         />
+      </div>
+
+      {/* ====== 左下角：子任务按钮 ====== */}
+      <div className="absolute bottom-3 left-3 z-20">
+        <button
+          onClick={() => togglePanel('subtask')}
+          aria-label="子任务"
+          className={`rounded-lg p-1.5 transition-colors hover:bg-canvas-2 ${
+            subtasks.length > 0 ? 'text-royal' : 'text-ink-3'
+          }`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="M9 14l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {panel === 'subtask' && (
+          <div className="absolute bottom-full left-0 z-20 mb-1 w-56 overflow-hidden rounded-xl border border-canvas-3 bg-white shadow-card-xl">
+            <div className="border-b border-canvas-3 px-3 py-2">
+              <span className="text-[11px] font-semibold tracking-wide text-ink-3">子任务</span>
+            </div>
+
+            {subtasks.length > 0 && (
+              <div className="max-h-48 overflow-y-auto px-1 py-1">
+                {subtasks.map((sub) => {
+                  const subCompleted = Boolean(sub.is_completed)
+                  return (
+                    <div key={sub.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-canvas-2 group/sub">
+                      <button
+                        onClick={() => toggleTask(sub)}
+                        className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] border-1.5 transition-all duration-150 ${
+                          subCompleted
+                            ? 'border-ink-4 bg-ink-4'
+                            : 'border-[#f5b73c] hover:bg-[#f5b73c]/15'
+                        }`}
+                      >
+                        {subCompleted && (
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5">
+                            <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                      <span
+                        className={`flex-1 truncate text-[13px] ${
+                          subCompleted ? 'text-ink-4 line-through' : 'text-ink-2'
+                        }`}
+                      >
+                        {sub.title}
+                      </span>
+                      <button
+                        onClick={() => {
+                          selectTask(null)
+                          void deleteTask(sub.id, sub.list_id)
+                        }}
+                        className="shrink-0 rounded p-0.5 text-ink-4 opacity-0 transition-all hover:bg-red-50 hover:text-prihigh group-hover/sub:opacity-100"
+                        aria-label="删除子任务"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M6 6l12 12M18 6l-12 12" strokeLinecap="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="border-t border-canvas-3 px-2 py-2">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={subtaskTitle}
+                  onChange={(e) => setSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                  placeholder="添加子任务…"
+                  className="min-w-0 flex-1 rounded-md border border-canvas-3 bg-white px-2 py-1 text-[12px] text-ink-2 placeholder:text-ink-4 focus:border-royal focus:outline-none"
+                />
+                <button
+                  onClick={() => void handleAddSubtask()}
+                  disabled={!subtaskTitle.trim()}
+                  className="shrink-0 rounded-md bg-royal px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-royal-dark disabled:opacity-40"
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ====== 右下角：更多操作（三个点） ====== */}

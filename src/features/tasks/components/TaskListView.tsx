@@ -5,6 +5,7 @@ import { useTasksStore } from '../store'
 import { TaskItem, PRIORITY_COLORS } from './TaskItem'
 import { TaskFormDialog } from './TaskFormDialog'
 import { TaskDetailPanel } from './TaskDetailPanel'
+import { TaskContextMenu, type ContextMenuState } from './TaskContextMenu'
 import { ResizeHandle } from '@/components/layout/ResizeHandle'
 import { DETAIL_WIDTH, useLayoutStore } from '@/components/layout/layoutStore'
 import { todayKey, pad2 } from '@/lib/date-utils'
@@ -35,6 +36,7 @@ export function TaskListView() {
   const [showCompleted, setShowCompleted] = useState(false)
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const { detailWidth, setDetailWidth, saveDetailWidth } = useLayoutStore()
   const {
     routines: dailyRoutines,
@@ -67,13 +69,25 @@ export function TaskListView() {
   const active = useMemo(() => tasks.filter((t) => !t.is_completed), [tasks])
   const completed = useMemo(() => tasks.filter((t) => t.is_completed), [tasks])
 
-  // 将活跃任务分组：今日 → 将来/无日期 → 过期
+  // 子任务按父任务分组（仅针对活跃任务）
+  const subtasksByParent = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    for (const t of active) {
+      if (t.parent_task_id) {
+        (map[t.parent_task_id] ??= []).push(t)
+      }
+    }
+    return map
+  }, [active])
+
+  // 将活跃任务分组：今日 → 将来/无日期 → 过期（排除子任务，子任务在父任务下方显示）
   const today = todayKey()
   const { todayActive, upcomingActive, overdueActive } = useMemo(() => {
     const todayList: Task[] = []
     const upcoming: Task[] = []
     const overdue: Task[] = []
     for (const t of active) {
+      if (t.parent_task_id) continue // 子任务不独立显示
       if (t.due_date === today) {
         todayList.push(t)
       } else if (t.due_date && t.due_date < today) {
@@ -154,7 +168,7 @@ export function TaskListView() {
   }
 
   // 传递给 TaskItem 的通用 props 工厂
-  function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue' }) {
+  function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean }) {
     const meta = listMeta[task.list_id]
     return {
       task,
@@ -163,10 +177,33 @@ export function TaskListView() {
       onToggle: toggleTask,
       onEdit: setEditingTask,
       onSelect: selectTask,
+      onContextMenu: (e: React.MouseEvent, t: Task) => {
+        e.preventDefault()
+        setContextMenu({ x: e.clientX, y: e.clientY, task: t })
+      },
       variant: (extra?.variant ?? 'default') as 'default' | 'overdue',
       listColor: isAllView ? meta?.color : undefined,
       listName: isAllView ? meta?.name : undefined,
+      isSubtask: extra?.isSubtask ?? false,
     }
+  }
+
+  /** 渲染一条任务及其子任务 */
+  function renderTaskWithSubtasks(task: Task, extra?: { variant?: 'default' | 'overdue'; sortable?: boolean }) {
+    const subtasks = subtasksByParent[task.id] ?? []
+    const sortable = extra?.sortable ?? true
+    return (
+      <div key={task.id}>
+        <TaskItem key={task.id} {...taskItemProps(task, extra)} sortable={sortable} />
+        {subtasks.length > 0 && (
+          <div className="mt-1 space-y-1">
+            {subtasks.map((sub) => (
+              <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} sortable={false} />
+            ))}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -372,8 +409,8 @@ export function TaskListView() {
             /* 具体清单视图：显示全部活跃任务（含无日期） */
             <SortableContext items={active.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
-                {active.map((task) => (
-                  <TaskItem key={task.id} {...taskItemProps(task)} />
+                {active.filter((t) => !t.parent_task_id).map((task) => (
+                  renderTaskWithSubtasks(task)
                 ))}
               </div>
             </SortableContext>
@@ -389,9 +426,7 @@ export function TaskListView() {
                   <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-royal">今天</h3>
                   <SortableContext items={todayActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
-                      {todayActive.map((task) => (
-                        <TaskItem key={task.id} {...taskItemProps(task)} />
-                      ))}
+                      {todayActive.map((task) => renderTaskWithSubtasks(task))}
                     </div>
                   </SortableContext>
                 </div>
@@ -405,9 +440,7 @@ export function TaskListView() {
                   </h3>
                   <SortableContext items={overdueActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
-                      {overdueActive.map((task) => (
-                        <TaskItem key={task.id} {...taskItemProps(task, { variant: 'overdue' })} />
-                      ))}
+                      {overdueActive.map((task) => renderTaskWithSubtasks(task, { variant: 'overdue' }))}
                     </div>
                   </SortableContext>
                 </div>
@@ -426,9 +459,9 @@ export function TaskListView() {
               </button>
               <div className="space-y-2">
                 {showCompleted &&
-                  completed.map((task) => (
-                    <TaskItem key={task.id} {...taskItemProps(task)} sortable={false} />
-                  ))}
+                  completed.filter((t) => !t.parent_task_id).map((task) =>
+                    renderTaskWithSubtasks(task, { sortable: false })
+                  )}
               </div>
             </div>
           )}
@@ -482,6 +515,14 @@ export function TaskListView() {
         onClose={() => setEditingTask(null)}
         task={editingTask}
       />
+
+      {/* 右键快捷菜单 */}
+      {contextMenu && (
+        <TaskContextMenu
+          menu={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }
