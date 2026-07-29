@@ -144,6 +144,15 @@ export interface DailyCompletion {
   count: number
 }
 
+// ── Journal ──
+export interface JournalEntry {
+  id: string
+  date: string // YYYY-MM-DD
+  content: string
+  created_at: string
+  updated_at: string
+}
+
 export interface DailyRoutineItem {
   id: string
   routine_id: string

@@ -148,6 +148,20 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_daily_completions_item_date ON daily_completions(item_id, date);
     `,
   },
+  {
+    version: 5,
+    sql: `
+      CREATE TABLE journals (
+        id         TEXT PRIMARY KEY,
+        date       TEXT NOT NULL UNIQUE,
+        content    TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX idx_journals_date ON journals(date);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {

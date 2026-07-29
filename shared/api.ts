@@ -5,6 +5,7 @@ import type {
   DailyCompletion,
   DailyRoutine,
   DailyRoutineItem,
+  JournalEntry,
   List,
   SettingsRow,
   Tag,
@@ -74,4 +75,12 @@ export interface Api {
   getDailyCompletions(date: string): Promise<DailyCompletion[]>
   incrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
   decrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
+
+  // Journal
+  getJournalByDate(date: string): Promise<JournalEntry | null>
+  getJournalsByDateRange(start: string, end: string): Promise<JournalEntry[]>
+  saveJournal(date: string, content: string): Promise<JournalEntry>
+  deleteJournal(date: string): Promise<void>
+  getJournalLastYear(date: string): Promise<JournalEntry | null>
+  getJournalMarkedDates(start: string, end: string): Promise<string[]>
 }

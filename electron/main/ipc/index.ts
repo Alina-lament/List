@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electro
 import { IpcChannels } from '@shared/ipc'
 import type { CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
 import type { DailyRepository } from '../db/repositories/dailyRepo'
+import type { JournalRepository } from '../db/repositories/journalRepo'
 import type { ListRepository } from '../db/repositories/listRepo'
 import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
@@ -16,11 +17,12 @@ export interface Repositories {
   tags: TagRepository
   settings: SettingsRepository
   daily: DailyRepository
+  journal: JournalRepository
   dataRoot: string
 }
 
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings, daily, dataRoot } = repos
+  const { tasks, lists, tags, settings, daily, journal, dataRoot } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -91,6 +93,18 @@ export function registerIpcHandlers(repos: Repositories): void {
   )
   ipcMain.handle(IpcChannels.dailyDecrement, (_e, routineId: string, date: string, itemId?: string | null) =>
     daily.decrement(routineId, date, itemId),
+  )
+
+  // ── Journal ──
+  ipcMain.handle(IpcChannels.journalGetByDate, (_e, date: string) => journal.getByDate(date))
+  ipcMain.handle(IpcChannels.journalGetByDateRange, (_e, start: string, end: string) =>
+    journal.getByDateRange(start, end),
+  )
+  ipcMain.handle(IpcChannels.journalSave, (_e, date: string, content: string) => journal.save(date, content))
+  ipcMain.handle(IpcChannels.journalDelete, (_e, date: string) => journal.remove(date))
+  ipcMain.handle(IpcChannels.journalGetLastYear, (_e, date: string) => journal.getLastYear(date))
+  ipcMain.handle(IpcChannels.journalGetMarkedDates, (_e, start: string, end: string) =>
+    journal.getMarkedDates(start, end),
   )
 
   // ── File dialogs ──

@@ -72,6 +72,14 @@ const api: Api = {
     ipcRenderer.invoke(IpcChannels.dailyIncrement, routineId, date, itemId),
   decrementDailyCompletion: (routineId, date, itemId) =>
     ipcRenderer.invoke(IpcChannels.dailyDecrement, routineId, date, itemId),
+
+  // Journal
+  getJournalByDate: (date) => ipcRenderer.invoke(IpcChannels.journalGetByDate, date),
+  getJournalsByDateRange: (start, end) => ipcRenderer.invoke(IpcChannels.journalGetByDateRange, start, end),
+  saveJournal: (date, content) => ipcRenderer.invoke(IpcChannels.journalSave, date, content),
+  deleteJournal: (date) => ipcRenderer.invoke(IpcChannels.journalDelete, date),
+  getJournalLastYear: (date) => ipcRenderer.invoke(IpcChannels.journalGetLastYear, date),
+  getJournalMarkedDates: (start, end) => ipcRenderer.invoke(IpcChannels.journalGetMarkedDates, start, end),
 }
 
 contextBridge.exposeInMainWorld('api', api)

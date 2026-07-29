@@ -85,8 +85,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             backdropFilter: `blur(${(bgGlassIntensity / 100) * 14}px)`,
           }}
         >
-          {/* 顶栏：右侧新建任务（每日视图有自己的新建按钮，不显示此按钮） */}
-          {view !== 'daily' && (
+          {/* 顶栏：右侧新建任务（每日/日记视图不显示此按钮） */}
+          {view !== 'daily' && view !== 'journal' && (
             <div
               className="flex items-center justify-end px-6 py-3 shadow-sm"
               style={{

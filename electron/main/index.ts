@@ -3,6 +3,7 @@ import { join } from 'path'
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'fs'
 import { initDatabase } from './db'
 import { createDailyRepository } from './db/repositories/dailyRepo'
+import { createJournalRepository } from './db/repositories/journalRepo'
 import { createListRepository } from './db/repositories/listRepo'
 import { createTagRepository } from './db/repositories/tagRepo'
 import { createTaskRepository } from './db/repositories/taskRepo'
@@ -113,8 +114,9 @@ app.whenReady().then(() => {
   const tags = createTagRepository(db)
   const settings = createSettingsRepository(db)
   const daily = createDailyRepository(db)
+  const journal = createJournalRepository(db)
 
-  registerIpcHandlers({ tasks, lists, tags, settings, daily, dataRoot })
+  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, dataRoot })
   startReminderScheduler(tasks)
 
   // 迁移后修正图标路径（从旧安装目录 → 新 userData 目录）

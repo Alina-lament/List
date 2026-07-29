@@ -55,6 +55,14 @@ export const IpcChannels = {
   dailyGetCompletions: 'daily:getCompletions',
   dailyIncrement: 'daily:increment',
   dailyDecrement: 'daily:decrement',
+
+  // journal
+  journalGetByDate: 'journal:getByDate',
+  journalGetByDateRange: 'journal:getByDateRange',
+  journalSave: 'journal:save',
+  journalDelete: 'journal:delete',
+  journalGetLastYear: 'journal:getLastYear',
+  journalGetMarkedDates: 'journal:getMarkedDates',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

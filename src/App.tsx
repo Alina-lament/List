@@ -17,6 +17,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { TaskListView } from '@/features/tasks/components/TaskListView'
 import { CalendarView } from '@/features/calendar/components/CalendarView'
 import { DailyView } from '@/features/daily/components/DailyView'
+import { JournalView } from '@/features/journal/components/JournalView'
 import { useTasksStore } from '@/features/tasks/store'
 import { useCalendarStore } from '@/features/calendar/store'
 import { useDailyStore } from '@/features/daily/store'
@@ -121,7 +122,17 @@ export default function App() {
       onDragEnd={(e) => void handleDragEnd(e)}
       onDragCancel={() => setActiveDrag(null)}
     >
-      <AppShell>{view === 'list' ? <TaskListView /> : view === 'calendar' ? <CalendarView /> : <DailyView />}</AppShell>
+      <AppShell>
+        {view === 'list' ? (
+          <TaskListView />
+        ) : view === 'calendar' ? (
+          <CalendarView />
+        ) : view === 'daily' ? (
+          <DailyView />
+        ) : (
+          <JournalView />
+        )}
+      </AppShell>
       <ReminderToastHost />
 
       <DragOverlay>
