@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import dayjs from 'dayjs'
 import { useJournalStore } from '../store'
-import { JournalEditor } from './JournalEditor'
-import { JournalPreview } from './JournalPreview'
+import { JournalTyporaEditor } from './JournalTyporaEditor'
 import { JournalCalendar } from './JournalCalendar'
 import { LastYearPanel } from './LastYearPanel'
 
@@ -100,37 +99,17 @@ export function JournalView() {
           </button>
         </div>
 
-        {saving && (
-          <span className="text-xs text-ink-4">保存中…</span>
-        )}
+        {saving && <span className="text-xs text-ink-4">保存中…</span>}
       </div>
 
       {/* 主内容 */}
       <div className="flex min-h-0 flex-1 gap-4 p-4">
-        {/* 编辑/预览二合一 */}
+        {/* Typora 式编辑器：单屏所见即所得 */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/70 shadow-card ring-1 ring-white/40 backdrop-blur-sm">
           {loading ? (
             <div className="flex flex-1 items-center justify-center text-sm text-ink-3">加载中…</div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
-              {/* 编辑区 */}
-              <div className="flex min-h-0 flex-[45] flex-col border-b border-canvas-3/30">
-                <div className="flex items-center justify-between border-b border-canvas-3/30 px-4 py-2">
-                  <span className="text-xs font-medium text-ink-3">编辑</span>
-                  <span className="text-[10px] text-ink-4">支持 Markdown 语法</span>
-                </div>
-                <div className="min-h-0 flex-1">
-                  <JournalEditor value={content} onChange={setContent} className="h-full" />
-                </div>
-              </div>
-              {/* 实时预览区 */}
-              <div className="flex min-h-0 flex-[55] flex-col">
-                <div className="border-b border-canvas-3/30 px-4 py-2 text-xs font-medium text-ink-3">实时预览</div>
-                <div className="min-h-0 flex-1">
-                  <JournalPreview content={content} className="h-full" placeholder="输入 Markdown 内容后在此实时预览…" />
-                </div>
-              </div>
-            </div>
+            <JournalTyporaEditor value={content} onChange={setContent} />
           )}
         </div>
 

@@ -35,10 +35,17 @@ function applyVariables(root: HTMLElement, state: Record<string, unknown>) {
   for (const [storeKey, cssVar] of Object.entries(CSS_VAR_MAP)) {
     root.style.setProperty(cssVar, String(state[storeKey] ?? ''))
   }
-  // 同步设置 canvas/sidebar/card 的 RGB 分量，供动态透明度使用
+  // 同步设置常用颜色的 RGB 分量，供动态透明度和第三方组件（如 Vditor）使用
   root.style.setProperty('--color-canvas-bg-rgb', hexToRgb(String(state.canvasBg ?? '#fdfdfc')))
   root.style.setProperty('--color-sidebar-bg-rgb', hexToRgb(String(state.sidebarBg ?? '#f4f5f7')))
   root.style.setProperty('--color-card-bg-rgb', hexToRgb(String(state.cardBg ?? '#ffffff')))
+  root.style.setProperty('--color-ink-rgb', hexToRgb(String(state.ink ?? '#0f172a')))
+  root.style.setProperty('--color-ink-2-rgb', hexToRgb(String(state.ink2 ?? '#334155')))
+  root.style.setProperty('--color-ink-3-rgb', hexToRgb(String(state.ink3 ?? '#64748b')))
+  root.style.setProperty('--color-ink-4-rgb', hexToRgb(String(state.ink3 ?? '#64748b')))
+  root.style.setProperty('--color-royal-rgb', hexToRgb(String(state.royal ?? '#4f6ef7')))
+  root.style.setProperty('--color-canvas-2-rgb', hexToRgb(String(state.canvasBg ?? '#fdfdfc')))
+  root.style.setProperty('--color-canvas-3-rgb', hexToRgb(String(state.borderColor ?? '#eaecf0')))
 
   // 背景图片相关样式已改为 AppShell/Sidebar 直接读取 store，避免 CSS 变量在
   // inline style 中不生效的问题。

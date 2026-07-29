@@ -1,0 +1,96 @@
+/* 覆盖 Vditor 默认样式，使其融入应用主题 */
+.vditor {
+  background: transparent !important;
+  border: none !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.vditor-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.vditor-ir {
+  background: transparent !important;
+  color: rgb(var(--color-ink-rgb)) !important;
+  font-size: 15px !important;
+  line-height: 1.75 !important;
+  padding: 1.25rem 1.5rem !important;
+}
+
+.vditor-ir__block {
+  color: rgb(var(--color-ink-rgb)) !important;
+}
+
+.vditor-ir__marker {
+  color: rgb(var(--color-ink-3-rgb)) !important;
+  opacity: 0.6;
+}
+
+.vditor-ir__marker--bi {
+  color: rgb(var(--color-ink-3-rgb)) !important;
+}
+
+.vditor-ir__link {
+  color: rgb(var(--color-royal-rgb)) !important;
+}
+
+.vditor-reset {
+  background: transparent !important;
+  color: rgb(var(--color-ink-rgb)) !important;
+  padding: 0 !important;
+}
+
+.vditor-reset h1,
+.vditor-reset h2,
+.vditor-reset h3,
+.vditor-reset h4,
+.vditor-reset h5,
+.vditor-reset h6 {
+  color: rgb(var(--color-ink-rgb)) !important;
+  border-bottom: 1px solid rgba(var(--color-canvas-3-rgb), 0.5);
+}
+
+.vditor-reset blockquote {
+  border-left-color: rgb(var(--color-royal-rgb)) !important;
+  color: rgb(var(--color-ink-2-rgb)) !important;
+  background: rgba(var(--color-canvas-2-rgb), 0.4);
+}
+
+.vditor-reset code {
+  background: rgba(var(--color-canvas-2-rgb), 0.6) !important;
+  color: rgb(var(--color-ink-2-rgb)) !important;
+}
+
+.vditor-reset pre {
+  background: rgba(var(--color-canvas-2-rgb), 0.6) !important;
+}
+
+.vditor-reset pre code {
+  background: transparent !important;
+}
+
+.vditor-reset table tr:nth-child(2n) {
+  background: rgba(var(--color-canvas-2-rgb), 0.4) !important;
+}
+
+.vditor-reset table th,
+.vditor-reset table td {
+  border-color: rgba(var(--color-canvas-3-rgb), 0.5) !important;
+}
+
+.vditor-reset hr {
+  border-top-color: rgba(var(--color-canvas-3-rgb), 0.5) !important;
+}
+
+.vditor-reset ul li::marker,
+.vditor-reset ol li::marker {
+  color: rgb(var(--color-ink-3-rgb)) !important;
+}
+
+.vditor__placeholder {
+  color: rgb(var(--color-ink-4-rgb)) !important;
+  opacity: 0.8;
+}
