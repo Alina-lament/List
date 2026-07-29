@@ -1,6 +1,8 @@
 node_modules/
 out/
 dist/
+!public/vditor/dist/
+!public/vditor/dist/**
 build/
 *.local
 .DS_Store
