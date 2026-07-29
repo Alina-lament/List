@@ -65,7 +65,7 @@ export function Sidebar() {
   const [showSettings, setShowSettings] = useState(false)
   const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
   const narrow = sidebarWidth < 210
-  const { brandName, brandImageUrl, setBrandName, setBrandImage, clearBrandImage } = useSettingsStore()
+  const { brandName, brandImageUrl, setBrandName, setBrandImage, clearBrandImage, bgGlassIntensity } = useSettingsStore()
   const [editingBrand, setEditingBrand] = useState(false)
   const [brandDraft, setBrandDraft] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -112,8 +112,12 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex min-w-0 shrink-0 flex-col bg-canvas-2/85 backdrop-blur-md"
-      style={{ width: sidebarWidth }}
+      className="flex min-w-0 shrink-0 flex-col rounded-2xl shadow-card-lg ring-1 ring-white/40"
+      style={{
+        width: sidebarWidth,
+        backgroundColor: `rgba(var(--color-sidebar-bg-rgb), ${0.1 + (bgGlassIntensity / 100) * 0.65})`,
+        backdropFilter: `blur(${(bgGlassIntensity / 100) * 24}px)`,
+      }}
     >
       {/* 品牌区 */}
       <div className="flex items-center gap-3 px-5 py-4">
@@ -183,7 +187,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="mx-4 mt-3 border-t border-canvas-3" />
+      <div className="mx-5 mt-3 h-px bg-canvas-3/40" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="mb-2 flex items-center justify-end px-2">
@@ -296,7 +300,8 @@ export function Sidebar() {
         {/* 标签分组 */}
         {tags.length > 0 && (
           <>
-            <div className="mb-2 mt-5 flex items-center justify-end border-t border-canvas-3 pt-4 px-2">
+            <div className="relative mb-2 mt-5 flex items-center justify-end pt-4 px-2">
+              <div className="absolute left-5 right-5 top-0 h-px bg-canvas-3/40" />
               <span className="text-[11px] font-semibold tracking-widest text-ink-3 uppercase">标签</span>
               <button
                 className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
@@ -345,7 +350,8 @@ export function Sidebar() {
       </div>
 
       {/* 底部设置按钮 */}
-      <div className="border-t border-canvas-3 px-3 py-2.5">
+      <div className="relative px-3 py-2.5">
+        <div className="absolute inset-x-3 top-0 h-px bg-canvas-3/40" />
         <button
           onClick={() => setShowSettings(true)}
           className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-2 transition-all duration-150 hover:bg-white/60 hover:text-ink"

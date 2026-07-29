@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { useTasksStore } from '@/features/tasks/store'
+import { useSettingsStore } from '@/features/settings/store'
 import { Button } from '@/components/ui/Button'
 import { TaskFormDialog } from '@/features/tasks/components/TaskFormDialog'
 import { ResizeHandle } from './ResizeHandle'
@@ -17,6 +18,7 @@ const PRIORITY_SHORTCUTS: Record<string, number> = {
 export function AppShell({ children }: { children: ReactNode }) {
   const { lists, selectedTaskId, tasksByList, view, updateTask } = useTasksStore()
   const { sidebarWidth, setSidebarWidth, saveSidebarWidth, init: initLayout } = useLayoutStore()
+  const { bgImageDataUrl, bgOpacity, bgBlur, bgScale, bgGlassIntensity } = useSettingsStore()
   const [showCreate, setShowCreate] = useState(false)
 
   useEffect(() => {
@@ -45,20 +47,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative flex h-full overflow-hidden bg-canvas">
-      {/* 背景图片层：覆盖整个 AppShell，位于 Sidebar/主内容区之下。
-          当没有设置背景图时 background-image 为 none，此时显示父级 bg-canvas。 */}
+      {/* 背景图片层：覆盖整个 AppShell，位于 Sidebar/主内容区之下。 */}
       <div
         className="pointer-events-none absolute inset-0 z-0"
         style={{
-          backgroundImage: 'var(--bg-image)',
-          backgroundSize: 'var(--bg-scale)',
+          backgroundImage: bgImageDataUrl ? `url("${bgImageDataUrl}")` : 'none',
+          backgroundSize: bgScale,
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          opacity: 'var(--bg-opacity)',
-          filter: 'blur(var(--bg-blur))',
+          opacity: bgOpacity / 100,
+          filter: `blur(${bgBlur}px)`,
         }}
       />
-      <div className="relative z-[1] flex h-full w-full">
+      {/* 统一毛玻璃层：在图片和 UI 之间营造整体磨砂质感 */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[1]"
+        style={{
+          backgroundColor: `rgba(var(--color-canvas-bg-rgb), ${bgGlassIntensity / 100})`,
+          backdropFilter: `blur(${(bgGlassIntensity / 100) * 24}px)`,
+        }}
+      />
+      <div className="relative z-[2] flex h-full w-full gap-3 p-3">
         <Sidebar />
         <ResizeHandle
           direction="right"
@@ -69,17 +78,29 @@ export function AppShell({ children }: { children: ReactNode }) {
           onChange={setSidebarWidth}
           onCommit={(w) => void saveSidebarWidth(w)}
         />
-        <main className="flex min-w-0 flex-1 flex-col">
-        {/* 顶栏：右侧新建任务（每日视图有自己的新建按钮，不显示此按钮） */}
-        {view !== 'daily' && (
-          <div className="flex items-center justify-end border-b border-canvas-3 bg-canvas/85 backdrop-blur-md px-6 py-3">
-            <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
-              + 新建任务
-            </Button>
-          </div>
-        )}
-        <div className="min-h-0 flex-1">{children}</div>
-      </main>
+        <main
+          className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl shadow-card-lg ring-1 ring-white/40"
+          style={{
+            backgroundColor: `rgba(var(--color-card-bg-rgb), ${0.55 + (bgGlassIntensity / 100) * 0.32})`,
+            backdropFilter: `blur(${(bgGlassIntensity / 100) * 14}px)`,
+          }}
+        >
+          {/* 顶栏：右侧新建任务（每日视图有自己的新建按钮，不显示此按钮） */}
+          {view !== 'daily' && (
+            <div
+              className="flex items-center justify-end px-6 py-3 shadow-sm"
+              style={{
+                backgroundColor: `rgba(var(--color-card-bg-rgb), ${0.35 + (bgGlassIntensity / 100) * 0.45})`,
+                backdropFilter: `blur(${(bgGlassIntensity / 100) * 10}px)`,
+              }}
+            >
+              <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
+                + 新建任务
+              </Button>
+            </div>
+          )}
+          <div className="min-h-0 flex-1">{children}</div>
+        </main>
 
         <TaskFormDialog
           open={showCreate}

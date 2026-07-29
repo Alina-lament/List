@@ -24,6 +24,7 @@ export interface SettingsState {
   bgOpacity: number
   bgBlur: number
   bgScale: 'cover' | 'contain' | 'fill'
+  bgGlassIntensity: number
   // 图标
   appIconPath: string | null
   // 品牌
@@ -49,6 +50,11 @@ export interface SettingsState {
 
 function getDefault(key: string): string {
   return DEFAULT_SETTINGS[key] ?? ''
+}
+
+function parseNum(value: unknown, fallback: number): number {
+  const n = Number(value)
+  return Number.isNaN(n) ? fallback : n
 }
 
 function parseMap(rows: { key: string; value: string }[]): Record<string, string> {
@@ -96,9 +102,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   prilow: getDefault('prilow'),
   bgImagePath: null,
   bgImageDataUrl: null,
-  bgOpacity: Number(getDefault('bgOpacity')) || 30,
-  bgBlur: Number(getDefault('bgBlur')) || 0,
-  bgScale: (getDefault('bgScale') as 'cover') || 'cover',
+  bgOpacity: parseNum(getDefault('bgOpacity'), 80),
+  bgBlur: parseNum(getDefault('bgBlur'), 0),
+  bgScale: (getDefault('bgScale') as 'cover' | 'contain' | 'fill') || 'cover',
+  bgGlassIntensity: parseNum(getDefault('bgGlassIntensity'), 35),
   appIconPath: null,
   brandName: getDefault('brandName'),
   brandImageUrl: null,
@@ -125,9 +132,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         prihigh: map.prihigh ?? getDefault('prihigh'),
         primed: map.primed ?? getDefault('primed'),
         prilow: map.prilow ?? getDefault('prilow'),
-        bgOpacity: Number(map.bgOpacity) || 30,
-        bgBlur: Number(map.bgBlur) || 0,
+        bgOpacity: parseNum(map.bgOpacity, 80),
+        bgBlur: parseNum(map.bgBlur, 0),
         bgScale: (map.bgScale as 'cover' | 'contain' | 'fill') || 'cover',
+        bgGlassIntensity: parseNum(map.bgGlassIntensity, 35),
         appIconPath: map.appIconPath || null,
         brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
@@ -203,7 +211,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   async resetDefaults() {
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-      if (['bgImagePath', 'bgOpacity', 'bgBlur', 'bgScale', 'appIconPath', 'scrollSensitivity'].includes(key)) continue
+      if (['bgImagePath', 'bgOpacity', 'bgBlur', 'bgScale', 'bgGlassIntensity', 'appIconPath', 'scrollSensitivity'].includes(key)) continue
       await api.updateSetting(key, value)
     }
     set({

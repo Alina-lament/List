@@ -209,11 +209,11 @@ export function TaskListView() {
   return (
     <div className="flex h-full w-full">
       {/* 左：任务列表 */}
-      <div className="flex min-w-0 flex-1 flex-col px-8 py-6">
+      <div className="flex min-w-0 flex-1 flex-col px-5 py-5">
         {/* 快速添加栏 */}
         <div className="mb-3">
           {(quickPanel || timePanel) && <div className="fixed inset-0 z-10" onClick={() => { setQuickPanel(null); setTimePanel(null) }} />}
-          <div className="rounded-xl border border-canvas-3 bg-canvas-2 transition-all duration-150 focus-within:border-royal focus-within:bg-white focus-within:ring-3 focus-within:ring-royal-50/50 hover:border-canvas-4">
+          <div className="rounded-xl bg-canvas-2/80 ring-1 ring-canvas-3/40 transition-all duration-150 focus-within:bg-white focus-within:ring-3 focus-within:ring-royal-50/50 hover:ring-canvas-4">
             <input
               value={quickTitle}
               onChange={(e) => setQuickTitle(e.target.value)}
@@ -222,7 +222,7 @@ export function TaskListView() {
               className="w-full bg-transparent px-4 py-2.5 text-sm text-ink placeholder:text-ink-4 focus:outline-none"
             />
             {/* 下方小按钮栏 */}
-            <div className="flex items-center gap-1 border-t border-canvas-3/60 px-2 py-1.5">
+            <div className="flex items-center gap-1 border-t border-canvas-3/30 px-2 py-1.5">
               {/* 日期按钮 */}
               <div className="relative">
                 <button
@@ -374,7 +374,7 @@ export function TaskListView() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(Number(e.target.value) as -1 | 0 | 1 | 2 | 3)}
-            className="rounded-lg border border-canvas-3 bg-white px-2.5 py-1.5 text-xs text-ink-2 focus:border-royal focus:outline-none"
+            className="rounded-lg bg-white/80 px-2.5 py-1.5 text-xs text-ink-2 ring-1 ring-canvas-3/40 focus:border-royal focus:outline-none"
           >
             <option value={-1}>全部优先级</option>
             <option value={3}>🔴 高</option>
@@ -449,7 +449,8 @@ export function TaskListView() {
           )}
 
           {completed.length > 0 && (
-            <div className="mt-6">
+            <div className="relative mt-6">
+              <div className="absolute inset-x-0 -top-3 h-px bg-canvas-3/40" />
               <button
                 className="mb-3 flex items-center gap-1.5 text-xs font-medium text-ink-3 hover:text-ink transition-colors"
                 onClick={() => setShowCompleted((v) => !v)}
@@ -478,7 +479,8 @@ export function TaskListView() {
             })
             if (todaysDaily.length === 0) return null
             return (
-              <div className="mt-6 border-t border-canvas-3 pt-4">
+              <div className="relative mt-6 pt-4">
+                <div className="absolute inset-x-0 top-0 h-px bg-canvas-3/40" />
                 <h3 className="mb-3 text-[11px] font-semibold tracking-wide text-ink-3 uppercase">每日打卡</h3>
                 <div className="space-y-2">
                   {todaysDaily.map((routine) => (
@@ -508,7 +510,14 @@ export function TaskListView() {
         onChange={setDetailWidth}
         onCommit={(w) => void saveDetailWidth(w)}
       />
-      <TaskDetailPanel />
+      <TaskDetailPanel
+        onEditTask={() => {
+          const id = selectedTaskId
+          if (!id) return
+          const t = tasks.find((x) => x.id === id)
+          if (t) setEditingTask(t)
+        }}
+      />
 
       <TaskFormDialog
         open={editingTask !== null}

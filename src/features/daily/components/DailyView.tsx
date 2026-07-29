@@ -53,7 +53,7 @@ export function DailyView() {
   return (
     <div className="flex h-full flex-col">
       {/* 顶栏 */}
-      <div className="flex items-center justify-between border-b border-canvas-3 px-8 py-4">
+      <div className="flex items-center justify-between px-5 py-4 shadow-sm">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-bold text-ink">每日</h2>
           {stats.total > 0 && (
@@ -73,7 +73,7 @@ export function DailyView() {
       </div>
 
       {/* 内容区 */}
-      <div className="flex-1 overflow-y-auto px-8 py-5">
+      <div className="flex-1 overflow-y-auto px-5 py-5">
         {todaysRoutines.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-4 rounded-2xl bg-white p-4 shadow-xs ring-1 ring-ink/5">

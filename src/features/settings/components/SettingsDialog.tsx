@@ -184,7 +184,7 @@ function QuickTab() {
 }
 
 // ── 主题颜色标签页 ──
-function ColorsTab({ store }: { store: ReturnType<typeof useSettingsStore.getState> & typeof store }) {
+function ColorsTab({ store }: { store: ReturnType<typeof useSettingsStore.getState> }) {
   return (
     <div className="space-y-3">
       {/* 预设主题 */}
@@ -232,7 +232,7 @@ function BackgroundTab({
   onSelectImage,
   onClearBg,
 }: {
-  store: ReturnType<typeof useSettingsStore.getState> & typeof store
+  store: ReturnType<typeof useSettingsStore.getState>
   previewBg: string | null
   onSelectImage: () => void
   onClearBg: () => void
@@ -240,12 +240,14 @@ function BackgroundTab({
   const [opacity, setOpacity] = useState(store.bgOpacity)
   const [blur, setBlur] = useState(store.bgBlur)
   const [scale, setScale] = useState(store.bgScale)
+  const [glassIntensity, setGlassIntensity] = useState(store.bgGlassIntensity)
 
   useEffect(() => {
     setOpacity(store.bgOpacity)
     setBlur(store.bgBlur)
     setScale(store.bgScale)
-  }, [store.bgOpacity, store.bgBlur, store.bgScale])
+    setGlassIntensity(store.bgGlassIntensity)
+  }, [store.bgOpacity, store.bgBlur, store.bgScale, store.bgGlassIntensity])
 
   return (
     <div className="space-y-4">
@@ -278,7 +280,7 @@ function BackgroundTab({
       <div className="space-y-3">
         <div>
           <label className="mb-1 block text-xs font-semibold text-ink-2">
-            透明度：{opacity}%
+            图片不透明度：{opacity}%
           </label>
           <input
             type="range"
@@ -304,6 +306,22 @@ function BackgroundTab({
             onChange={(e) => {
               setBlur(Number(e.target.value))
               store.updateBgSetting('bgBlur', e.target.value)
+            }}
+            className="w-full accent-royal"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-ink-2">
+            毛玻璃强度：{glassIntensity}%
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={glassIntensity}
+            onChange={(e) => {
+              setGlassIntensity(Number(e.target.value))
+              store.updateBgSetting('bgGlassIntensity', e.target.value)
             }}
             className="w-full accent-royal"
           />
@@ -364,7 +382,7 @@ function IconsTab({
   onSelectIcon,
   onRefresh,
 }: {
-  store: ReturnType<typeof useSettingsStore.getState> & typeof store
+  store: ReturnType<typeof useSettingsStore.getState>
   icons: string[]
   onSelectIcon: (fileName: string) => void
   onRefresh: () => void

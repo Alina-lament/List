@@ -20,12 +20,11 @@ type DialogState =
   | null
 
 export function CalendarView() {
-  const { year, month, instancesByDate, loading, shiftMonth, goToday, fetchMonth } =
+  const { year, month, weekCount, instancesByDate, loading, shiftMonth, goToday, setWeekCount, fetchMonth } =
     useCalendarStore()
   const { routines: dailyRoutines, completions: dailyCompletions } = useDailyStore()
   const [dialog, setDialog] = useState<DialogState>(null)
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
-  const [weekCount, setWeekCount] = useState<1 | 2 | 4>(4)
   const wheelAccum = useRef(0)
 
   useEffect(() => {
@@ -123,7 +122,7 @@ export function CalendarView() {
   }
 
   return (
-    <div className="flex h-full flex-col px-6 py-5" onWheel={handleWheel}>
+    <div className="flex h-full flex-col px-5 py-5" onWheel={handleWheel}>
       {/* 头部导航 */}
       <div className="mb-4 flex items-center gap-2">
         <Button onClick={() => shiftMonth(-1)} aria-label="上一月">
