@@ -6,12 +6,6 @@ import { JournalPreview } from './JournalPreview'
 import { JournalCalendar } from './JournalCalendar'
 import { LastYearPanel } from './LastYearPanel'
 
-const MODE_LABELS = {
-  edit: '编辑',
-  preview: '预览',
-  split: '分屏',
-}
-
 export function JournalView() {
   const {
     currentDate,
@@ -20,11 +14,9 @@ export function JournalView() {
     markedDates,
     loading,
     saving,
-    mode,
     error,
     init,
     setContent,
-    setMode,
     goPrevDay,
     goNextDay,
     goToday,
@@ -74,9 +66,6 @@ export function JournalView() {
     void loadMarkedDates(year, month)
   }
 
-  const showEditor = mode === 'edit' || mode === 'split'
-  const showPreview = mode === 'preview' || mode === 'split'
-
   return (
     <div className="flex h-full flex-col">
       {/* 顶栏 */}
@@ -111,48 +100,36 @@ export function JournalView() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg bg-canvas-2/70 p-1 ring-1 ring-canvas-3/40">
-          {(Object.keys(MODE_LABELS) as Array<keyof typeof MODE_LABELS>).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
-                mode === m ? 'bg-white text-ink shadow-xs' : 'text-ink-3 hover:text-ink'
-              }`}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
+        {saving && (
+          <span className="text-xs text-ink-4">保存中…</span>
+        )}
       </div>
 
       {/* 主内容 */}
       <div className="flex min-h-0 flex-1 gap-4 p-4">
-        {/* 编辑/预览区 */}
+        {/* 编辑/预览二合一 */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white/70 shadow-card ring-1 ring-white/40 backdrop-blur-sm">
           {loading ? (
             <div className="flex flex-1 items-center justify-center text-sm text-ink-3">加载中…</div>
           ) : (
-            <div className="flex min-h-0 flex-1">
-              {showEditor && (
-                <div className={`flex min-h-0 flex-col ${showPreview ? 'w-1/2 border-r border-canvas-3/30' : 'w-full'}`}>
-                  <div className="flex items-center justify-between border-b border-canvas-3/30 px-4 py-2">
-                    <span className="text-xs font-medium text-ink-3">编辑</span>
-                    {saving && <span className="text-[10px] text-ink-4">保存中…</span>}
-                  </div>
-                  <div className="min-h-0 flex-1">
-                    <JournalEditor value={content} onChange={setContent} className="h-full" />
-                  </div>
+            <div className="flex min-h-0 flex-1 flex-col">
+              {/* 编辑区 */}
+              <div className="flex min-h-0 flex-[45] flex-col border-b border-canvas-3/30">
+                <div className="flex items-center justify-between border-b border-canvas-3/30 px-4 py-2">
+                  <span className="text-xs font-medium text-ink-3">编辑</span>
+                  <span className="text-[10px] text-ink-4">支持 Markdown 语法</span>
                 </div>
-              )}
-              {showPreview && (
-                <div className={`flex min-h-0 flex-col ${showEditor ? 'w-1/2' : 'w-full'}`}>
-                  <div className="border-b border-canvas-3/30 px-4 py-2 text-xs font-medium text-ink-3">预览</div>
-                  <div className="min-h-0 flex-1">
-                    <JournalPreview content={content} className="h-full" />
-                  </div>
+                <div className="min-h-0 flex-1">
+                  <JournalEditor value={content} onChange={setContent} className="h-full" />
                 </div>
-              )}
+              </div>
+              {/* 实时预览区 */}
+              <div className="flex min-h-0 flex-[55] flex-col">
+                <div className="border-b border-canvas-3/30 px-4 py-2 text-xs font-medium text-ink-3">实时预览</div>
+                <div className="min-h-0 flex-1">
+                  <JournalPreview content={content} className="h-full" placeholder="输入 Markdown 内容后在此实时预览…" />
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -28,8 +28,17 @@ export function JournalCalendar({ year, month, selectedDate, markedDates, onSele
     onChangeMonth(next.year(), next.month() + 1)
   }
 
+  function handleWheel(e: React.WheelEvent) {
+    e.preventDefault()
+    if (e.deltaY > 0) {
+      changeMonth(1)
+    } else if (e.deltaY < 0) {
+      changeMonth(-1)
+    }
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full" onWheel={handleWheel}>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <select

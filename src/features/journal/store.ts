@@ -2,8 +2,6 @@ import { create } from 'zustand'
 import type { JournalEntry } from '@shared/types'
 import { api } from '@/lib/api'
 
-export type JournalViewMode = 'edit' | 'preview' | 'split'
-
 interface JournalState {
   currentDate: string
   content: string
@@ -11,7 +9,6 @@ interface JournalState {
   markedDates: Set<string>
   loading: boolean
   saving: boolean
-  mode: JournalViewMode
   saveTimer: ReturnType<typeof setTimeout> | null
   error: string | null
 
@@ -24,7 +21,6 @@ interface JournalState {
   goPrevDay(): Promise<void>
   goNextDay(): Promise<void>
   goToday(): Promise<void>
-  setMode(mode: JournalViewMode): void
   loadMarkedDates(year: number, month: number): Promise<void>
   clearError(): void
 }
@@ -59,7 +55,6 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   markedDates: new Set(),
   loading: false,
   saving: false,
-  mode: 'split',
   saveTimer: null,
   error: null,
 
@@ -153,10 +148,6 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
 
   async goToday() {
     await get().goDate(todayKey())
-  },
-
-  setMode(mode) {
-    set({ mode })
   },
 
   async loadMarkedDates(year, month) {
