@@ -9,7 +9,6 @@ files:
   - package.json
 asarUnpack:
   - '**/*.node'
-  - 'out/renderer/vditor/**'
 win:
   target:
     - nsis
