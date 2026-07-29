@@ -23,7 +23,7 @@ function applyVariables(root: HTMLElement, state: Record<string, unknown>) {
     root.style.setProperty(cssVar, String(state[storeKey] ?? ''))
   }
   // background image
-  const bgPath = state.bgImagePath as string | null | undefined
+  const bgDataUrl = state.bgImageDataUrl as string | null | undefined
   const opacity = (Number(state.bgOpacity) || 0) / 100
   const blur = Number(state.bgBlur) || 0
   const scale = (state.bgScale as string) || 'cover'
@@ -32,9 +32,8 @@ function applyVariables(root: HTMLElement, state: Record<string, unknown>) {
   root.style.setProperty('--bg-blur', `${blur}px`)
   root.style.setProperty('--bg-scale', scale)
 
-  if (bgPath) {
-    const fileUrl = `file:///${bgPath.replace(/\\/g, '/')}`
-    root.style.setProperty('--bg-image', `url("${fileUrl}")`)
+  if (bgDataUrl) {
+    root.style.setProperty('--bg-image', `url("${bgDataUrl}")`)
   } else {
     root.style.setProperty('--bg-image', 'none')
   }
@@ -57,18 +56,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {/* 背景图片层 */}
-      <div
-        className="pointer-events-none fixed inset-0 z-[-2]"
-        style={{
-          backgroundImage: 'var(--bg-image)',
-          backgroundSize: 'var(--bg-scale)',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          opacity: 'var(--bg-opacity)',
-          filter: 'blur(var(--bg-blur))',
-        }}
-      />
+      {/* 背景图片由 AppShell 负责渲染，确保位于应用内容底层而不是被 body/AppShell 的
+          背景色遮住。此处只注入 CSS 变量供 AppShell 使用。 */}
       {children}
     </>
   )

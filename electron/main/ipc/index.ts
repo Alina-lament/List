@@ -182,6 +182,16 @@ export function registerIpcHandlers(repos: Repositories): void {
     const files = readdirSync(bgDir).filter((f) => /^bg\./.test(f))
     return files.length > 0 ? join(bgDir, files[0]) : null
   })
+  ipcMain.handle(IpcChannels.bgGetImageDataUrl, () => {
+    if (!existsSync(bgDir)) return null
+    const files = readdirSync(bgDir).filter((f) => /^bg\./.test(f))
+    if (files.length === 0) return null
+    const filePath = join(bgDir, files[0])
+    const buf = readFileSync(filePath)
+    const ext = files[0].split('.').pop()?.toLowerCase() ?? 'jpg'
+    const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
+  })
   ipcMain.handle(IpcChannels.bgClearImage, () => {
     if (existsSync(bgDir)) {
       const files = readdirSync(bgDir).filter((f) => /^bg\./.test(f))

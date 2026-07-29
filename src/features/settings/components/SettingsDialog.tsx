@@ -265,7 +265,7 @@ function BackgroundTab({
           <div
             className="h-32 w-full bg-gray-100"
             style={{
-              backgroundImage: `url("file:///${previewBg.replace(/\\/g, '/')}")`,
+              backgroundImage: store.bgImageDataUrl ? `url("${store.bgImageDataUrl}")` : 'none',
               backgroundSize: scale,
               backgroundPosition: 'center',
               opacity: opacity / 100,

@@ -58,6 +58,7 @@ export interface Api {
   // Background image
   setBgImage(filePath: string): Promise<string>
   getBgImagePath(): Promise<string | null>
+  getBgImageDataUrl(): Promise<string | null>
   clearBgImage(): Promise<void>
 
   // Brand

@@ -112,7 +112,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex min-w-0 shrink-0 flex-col bg-canvas-2 backdrop-blur-sm"
+      className="flex min-w-0 shrink-0 flex-col bg-canvas-2/85 backdrop-blur-md"
       style={{ width: sidebarWidth }}
     >
       {/* 品牌区 */}

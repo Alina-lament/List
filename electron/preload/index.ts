@@ -52,6 +52,7 @@ const api: Api = {
   // Background image
   setBgImage: (filePath) => ipcRenderer.invoke(IpcChannels.bgSetImage, filePath),
   getBgImagePath: () => ipcRenderer.invoke(IpcChannels.bgGetImagePath),
+  getBgImageDataUrl: () => ipcRenderer.invoke(IpcChannels.bgGetImageDataUrl),
   clearBgImage: () => ipcRenderer.invoke(IpcChannels.bgClearImage),
 
   // Brand

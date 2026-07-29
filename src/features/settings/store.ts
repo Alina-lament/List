@@ -20,6 +20,7 @@ export interface SettingsState {
   prilow: string
   // 背景图片
   bgImagePath: string | null
+  bgImageDataUrl: string | null
   bgOpacity: number
   bgBlur: number
   bgScale: 'cover' | 'contain' | 'fill'
@@ -94,6 +95,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   primed: getDefault('primed'),
   prilow: getDefault('prilow'),
   bgImagePath: null,
+  bgImageDataUrl: null,
   bgOpacity: Number(getDefault('bgOpacity')) || 30,
   bgBlur: Number(getDefault('bgBlur')) || 0,
   bgScale: (getDefault('bgScale') as 'cover') || 'cover',
@@ -130,6 +132,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
         bgImagePath: await api.getBgImagePath(),
+        bgImageDataUrl: await api.getBgImageDataUrl(),
         loading: false,
       })
       // 窗口图标由主进程在 BrowserWindow 构造时设置，此处不重复调用
@@ -150,7 +153,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   async setBgImage(path) {
     const dest = await api.setBgImage(path)
     await api.updateSetting('bgImagePath', dest)
-    set({ bgImagePath: dest })
+    const dataUrl = await api.getBgImageDataUrl()
+    set({ bgImagePath: dest, bgImageDataUrl: dataUrl })
   },
 
   async updateBgSetting(key, value) {
@@ -161,7 +165,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   async clearBgImage() {
     await api.clearBgImage()
     await api.updateSetting('bgImagePath', '')
-    set({ bgImagePath: null })
+    set({ bgImagePath: null, bgImageDataUrl: null })
   },
 
   async setAppIcon(iconPath) {

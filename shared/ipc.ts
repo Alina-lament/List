@@ -39,6 +39,7 @@ export const IpcChannels = {
   // background image
   bgSetImage: 'bg:setImage',
   bgGetImagePath: 'bg:getImagePath',
+  bgGetImageDataUrl: 'bg:getImageDataUrl',
   bgClearImage: 'bg:clearImage',
 
   // brand
