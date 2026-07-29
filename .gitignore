@@ -1,8 +1,14 @@
 node_modules/
 out/
 dist/
+build/
 *.local
 .DS_Store
+
+# 运行时生成的资源
+/data/backgrounds/
+/data/icons/app-taskbar.ico
+/data/icons/taskbar-*.ico
 
 # Claude Code 本地配置
 .claude/
