@@ -24,6 +24,9 @@ export function JournalTyporaEditor({ value, onChange, className = '' }: Journal
       mode: 'ir',
       theme: 'classic',
       icon: 'material',
+      lang: 'zh_CN',
+      // 使用本地静态资源，避免打包后无法访问 unpkg CDN
+      cdn: './vditor',
       value: initialValueRef.current,
       placeholder: '记录今天的心情与故事…',
       minHeight: 0,
