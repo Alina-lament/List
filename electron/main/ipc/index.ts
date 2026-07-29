@@ -6,6 +6,7 @@ import type { ListRepository } from '../db/repositories/listRepo'
 import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
+import { syncTaskbarIcon } from '../iconSync'
 import { join } from 'path'
 import { readdirSync, readFileSync, copyFileSync, existsSync, unlinkSync } from 'fs'
 
@@ -108,16 +109,28 @@ export function registerIpcHandlers(repos: Repositories): void {
   ipcMain.handle(IpcChannels.iconsList, () => {
     if (!existsSync(iconsDir)) return []
     return readdirSync(iconsDir).filter((f) =>
-      /\.(ico|png|jpg|jpeg|svg)$/i.test(f),
+      /\.(ico|png|jpg|jpeg|svg)$/i.test(f) && f !== 'app-taskbar.ico',
     )
   })
   ipcMain.handle(IpcChannels.iconsOpenFolder, () => shell.openPath(iconsDir))
   ipcMain.handle(IpcChannels.iconsSetApp, (_e, iconPath: string) => {
+    console.log('[ipc] iconsSetApp 收到图标路径:', iconPath)
     const win = BrowserWindow.getAllWindows()[0]
-    if (win) {
-      const img = nativeImage.createFromPath(iconPath)
-      win.setIcon(img)
+    if (!win) return
+
+    // 窗口标题栏/Alt-Tab 图标使用原图即可，同步设置让前端立即得到反馈
+    try {
+      win.setIcon(nativeImage.createFromPath(iconPath))
+    } catch (err) {
+      console.error('[ipc] 设置窗口图标失败:', err)
     }
+
+    // 任务栏图标需要额外处理：转换为 ICO、同步快捷方式、
+    // 并通过 setAppDetails 设置 RelaunchIconResource。
+    // 该过程包含 Explorer 刷新等待，放在后台执行，不阻塞前端保存设置。
+    syncTaskbarIcon(win, iconPath, dataRoot).catch((err) => {
+      console.error('[ipc] 同步任务栏图标失败:', err)
+    })
   })
 
   ipcMain.handle(IpcChannels.iconsGetDataUrl, (_e, fileName: string) => {

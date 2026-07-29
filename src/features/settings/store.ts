@@ -132,11 +132,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         bgImagePath: await api.getBgImagePath(),
         loading: false,
       })
-      // 恢复窗口图标
-      const iconPath = map.appIconPath
-      if (iconPath) {
-        await api.setWindowIcon(iconPath)
-      }
+      // 窗口图标由主进程在 BrowserWindow 构造时设置，此处不重复调用
+      // （win.setIcon() 在 Windows 上无法更新任务栏图标，会覆盖构造时设好的图标）
       // 加载品牌图片 data URL
       const brandUrl = await api.getBrandDataUrl()
       if (brandUrl) set({ brandImageUrl: brandUrl })

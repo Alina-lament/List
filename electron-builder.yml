@@ -1,6 +1,7 @@
 appId: com.younglife.app
 productName: YoungLife
 npmRebuild: false
+publish: null
 directories:
   buildResources: build
 files:
@@ -17,3 +18,4 @@ nsis:
   language: 2052
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  include: build/installer.nsh
