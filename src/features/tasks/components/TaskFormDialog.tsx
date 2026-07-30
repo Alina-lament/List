@@ -62,6 +62,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   const [listId, setListId] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [priority, setPriority] = useState<0 | 1 | 2 | 3>(0)
   const [reminder, setReminder] = useState('')
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({ rrule: null, rrule_end_date: null })
@@ -83,6 +85,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       description,
       due_date: dueDate || null,
       due_time: dueTime || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
       priority,
       reminder_minutes: reminder === '' ? null : Number(reminder),
       is_recurring: (recurrence.rrule ? 1 : 0) as 0 | 1,
@@ -102,6 +106,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       setListId(task.list_id)
       setDueDate(task.due_date ?? '')
       setDueTime(task.due_time ?? '')
+      setStartDate(task.start_date ?? '')
+      setEndDate(task.end_date ?? '')
       setPriority(task.priority)
       setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
       setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
@@ -112,6 +118,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
         description: task.description,
         due_date: task.due_date,
         due_time: task.due_time,
+        start_date: task.start_date,
+        end_date: task.end_date,
         priority: task.priority,
         reminder_minutes: task.reminder_minutes,
         is_recurring: task.is_recurring,
@@ -134,6 +142,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       )
       setDueDate(defaultDueDate ?? '')
       setDueTime('')
+      setStartDate('')
+      setEndDate('')
       setPriority(0)
       setReminder('')
       setRecurrence({ rrule: null, rrule_end_date: null })
@@ -158,6 +168,8 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       initial.description !== current.description ||
       initial.due_date !== current.due_date ||
       initial.due_time !== current.due_time ||
+      initial.start_date !== current.start_date ||
+      initial.end_date !== current.end_date ||
       initial.priority !== current.priority ||
       initial.reminder_minutes !== current.reminder_minutes ||
       initial.is_recurring !== current.is_recurring ||
@@ -191,7 +203,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
     }
-  }, [title, description, listId, dueDate, dueTime, priority, reminder, recurrence, tagIds, task, updateTask])
+  }, [title, description, listId, dueDate, dueTime, startDate, endDate, priority, reminder, recurrence, tagIds, task, updateTask])
 
   async function handleSave() {
     if (!title.trim() || !listId) return
@@ -227,6 +239,11 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
 
   const listName = lists.find((l) => l.id === listId)?.name ?? ''
   const dateLabel = (() => {
+    if (startDate && endDate) {
+      const [, sm, sd] = startDate.split('-').map(Number)
+      const [, em, ed] = endDate.split('-').map(Number)
+      return `${sm}月${sd}日 — ${em}月${ed}日`
+    }
     if (!dueDate) return ''
     const [, m, d] = dueDate.split('-').map(Number)
     let s = `${m}月${d}日`
@@ -393,8 +410,43 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
                         </div>
                       </div>
                     </div>
+                    {/* 时间段选择 */}
+                    <div className="mt-3 border-t border-canvas-3 pt-3">
+                      <div className="mb-2 text-[11px] font-medium text-ink-3">时间段（可选）</div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-[10px] text-ink-4">开始</label>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              setStartDate(v)
+                              if (endDate && v && endDate < v) setEndDate(v)
+                            }}
+                            className="w-full rounded-xl border border-canvas-3 bg-canvas px-2 py-1.5 text-xs text-ink focus:border-royal focus:outline-none"
+                          />
+                        </div>
+                        <span className="mt-4 text-xs text-ink-4">—</span>
+                        <div className="flex-1">
+                          <label className="mb-1 block text-[10px] text-ink-4">结束</label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            min={startDate}
+                            onChange={(e) => {
+                              const v = e.target.value
+                              setEndDate(v)
+                              if (startDate && v && v < startDate) setStartDate(v)
+                            }}
+                            className="w-full rounded-xl border border-canvas-3 bg-canvas px-2 py-1.5 text-xs text-ink focus:border-royal focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="mt-3 flex justify-between">
-                      <button onClick={() => { setDueDate(''); setDueTime(''); setPanel(null) }}
+                      <button onClick={() => { setDueDate(''); setDueTime(''); setStartDate(''); setEndDate(''); setPanel(null) }}
                         className="rounded-xl px-3 py-1.5 text-xs font-medium text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh">清除日期</button>
                       <button onClick={() => setPanel(null)}
                         className="rounded-xl bg-royal px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-royal-dark">完成</button>

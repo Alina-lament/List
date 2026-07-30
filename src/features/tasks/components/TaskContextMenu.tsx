@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Task } from '@shared/types'
 import { useTasksStore } from '../store'
 import { PRIORITY_COLORS } from './TaskItem'
@@ -64,16 +65,23 @@ export function TaskContextMenu({
     }
   }, [onClose])
 
-  // Adjust position so menu doesn't overflow viewport
+  // 以鼠标位置为基准显示菜单；溢出时向反方向翻转，保持贴近鼠标
   const adjustPos = () => {
-    const w = 180 // estimated menu width
+    const w = 180 // menu width
     const h = subPanel ? 320 : 150 // estimated menu height
-    let x = menu.x
-    let y = menu.y
-    if (x + w > window.innerWidth) x = window.innerWidth - w - 8
-    if (y + h > window.innerHeight) y = window.innerHeight - h - 8
-    if (x < 0) x = 8
-    if (y < 0) y = 8
+    const pad = 4
+    let x = menu.x + 2 // 默认在鼠标右侧 2px
+    let y = menu.y + 2 // 默认在鼠标下方 2px
+
+    if (x + w > window.innerWidth - pad) {
+      x = menu.x - w - 2 // 右侧溢出则翻转到鼠标左侧
+    }
+    if (y + h > window.innerHeight - pad) {
+      y = menu.y - h - 2 // 底部溢出则翻转到鼠标上方
+    }
+    if (x < pad) x = pad
+    if (y < pad) y = pad
+
     return { left: x, top: y }
   }
 
@@ -100,7 +108,7 @@ export function TaskContextMenu({
     }
   }, [subPanel])
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       className="fixed z-[100] w-[180px] overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl"
@@ -326,6 +334,7 @@ export function TaskContextMenu({
           <span>删除任务</span>
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

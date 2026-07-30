@@ -81,7 +81,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       let pendingId: string
       if (!pendingList) {
         pendingId = (await api.createList('待定', '#9ca3af')).id
-        lists.push({ id: pendingId, name: '待定', color: '#9ca3af', sort_order: -1, created_at: '', updated_at: '' })
+        lists.push({ id: pendingId, name: '待定', color: '#9ca3af', icon: '', sort_order: -1, created_at: '', updated_at: '' })
       } else {
         pendingId = pendingList.id
       }
@@ -201,6 +201,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       is_completed: 0,
       due_date: input.due_date ?? null,
       due_time: input.due_time ?? null,
+      start_date: input.start_date ?? null,
+      end_date: input.end_date ?? null,
       priority: input.priority ?? 0,
       sort_order: (get().tasksByList[input.list_id]?.length ?? 0),
       is_recurring: input.is_recurring ?? 0,

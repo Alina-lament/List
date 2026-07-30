@@ -16,6 +16,14 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onT
     data: { type: 'calendar-instance', instance },
   })
 
+  const isRange = instance.is_range_instance
+  const isRangeStart = isRange && instance.date === instance.range_start
+  const isRangeEnd = isRange && instance.date === instance.range_end
+
+  const rangeClasses = isRange
+    ? `${isRangeStart ? 'rounded-r-none' : ''} ${isRangeEnd ? 'rounded-l-none' : ''} ${!isRangeStart && !isRangeEnd ? 'rounded-none' : ''}`
+    : 'rounded-lg'
+
   return (
     <div
       ref={setNodeRef}
@@ -23,9 +31,9 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onT
         transform: CSS.Translate.toString(transform),
         borderLeftColor: instance.list_color,
       }}
-      className={`group flex items-center gap-1.5 rounded-lg border-l-[3px] bg-white px-1.5 py-1 text-left text-xs shadow-xs transition-all duration-150 hover:shadow-card ${
+      className={`group flex items-center gap-1.5 border-l-[3px] bg-white px-1.5 py-1 text-left text-xs shadow-xs transition-all duration-150 hover:shadow-card ${
         isDragging ? 'opacity-30' : ''
-      }`}
+      } ${rangeClasses}`}
     >
       <span
         {...attributes}

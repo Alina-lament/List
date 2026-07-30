@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { Task } from '@shared/types'
+import type { List, Task } from '@shared/types'
 import { useTasksStore } from '../store'
 import { TaskItem, PRIORITY_COLORS } from './TaskItem'
 import { TaskFormDialog } from './TaskFormDialog'
@@ -49,10 +49,10 @@ export function TaskListView() {
   const isAllView = selectedListId === null
   const list = selectedListId ? lists.find((l) => l.id === selectedListId) ?? null : null
 
-  // 清单 ID → 颜色/名称 映射
-  const listMeta = useMemo(() => {
-    const map: Record<string, { color: string; name: string }> = {}
-    for (const l of lists) map[l.id] = { color: l.color, name: l.name }
+  // 清单 ID → 完整 List 映射
+  const listById = useMemo(() => {
+    const map: Record<string, List> = {}
+    for (const l of lists) map[l.id] = l
     return map
   }, [lists])
 
@@ -169,7 +169,6 @@ export function TaskListView() {
 
   // 传递给 TaskItem 的通用 props 工厂
   function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean }) {
-    const meta = listMeta[task.list_id]
     return {
       task,
       tagNames: tagNamesByTask[task.id] ?? [],
@@ -179,11 +178,10 @@ export function TaskListView() {
       onSelect: selectTask,
       onContextMenu: (e: React.MouseEvent, t: Task) => {
         e.preventDefault()
-        // 菜单显示在鼠标右侧，避免遮挡当前任务
-        setContextMenu({ x: e.clientX + 8, y: e.clientY, task: t })
+        setContextMenu({ x: e.clientX, y: e.clientY, task: t })
       },
       variant: (extra?.variant ?? 'default') as 'default' | 'overdue',
-      list: isAllView ? meta : undefined,
+      list: isAllView ? listById[task.list_id] : undefined,
       isSubtask: extra?.isSubtask ?? false,
     }
   }

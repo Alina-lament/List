@@ -24,6 +24,8 @@ function buildInstance(
   listsById: Map<string, List>,
   tagsByTask: Map<string, Tag[]>,
   override?: TaskException,
+  rangeStart: string | null = null,
+  rangeEnd: string | null = null,
 ): CalendarTaskInstance {
   return {
     instance_id: isRecurringInstance ? `${task.id}|${date}` : task.id,
@@ -39,6 +41,9 @@ function buildInstance(
     tags: tagsByTask.get(task.id) ?? [],
     is_recurring_instance: isRecurringInstance,
     reminder_minutes: override?.reminder_minutes ?? task.reminder_minutes,
+    is_range_instance: rangeStart !== null && rangeEnd !== null,
+    range_start: rangeStart,
+    range_end: rangeEnd,
   }
 }
 
@@ -81,15 +86,36 @@ export function expandInstances(
     byDate[instance.date] = arr
   }
 
+  const rangeStart = utcDate(start)
+  const rangeEnd = new Date(utcDate(end).getTime() + 24 * 60 * 60 * 1000 - 1)
+
   for (const task of data.nonRecurring) {
+    // 优先按 start_date/end_date 展开为日期范围
+    if (task.start_date && task.end_date) {
+      const taskStart = utcDate(task.start_date)
+      const taskEnd = utcDate(task.end_date)
+      const effectiveStart = taskStart < rangeStart ? rangeStart : taskStart
+      const effectiveEnd = taskEnd > rangeEnd ? rangeEnd : taskEnd
+      if (effectiveStart > effectiveEnd) continue
+
+      const d = new Date(effectiveStart.getTime())
+      while (d <= effectiveEnd) {
+        const key = toKey(d)
+        const ex = exceptions.get(exceptionKey(task.id, key))
+        if (ex?.action !== 'deleted') {
+          push(buildInstance(task, key, false, listsById, tagsByTask, ex, task.start_date, task.end_date))
+        }
+        d.setUTCDate(d.getUTCDate() + 1)
+      }
+      continue
+    }
+
+    // 否则按 due_date 生成单日实例
     if (!task.due_date) continue
     const ex = exceptions.get(exceptionKey(task.id, task.due_date))
     if (ex?.action === 'deleted') continue
     push(buildInstance(task, task.due_date, false, listsById, tagsByTask, ex))
   }
-
-  const rangeStart = utcDate(start)
-  const rangeEnd = new Date(utcDate(end).getTime() + 24 * 60 * 60 * 1000 - 1)
 
   for (const task of data.recurring) {
     if (!task.rrule || !task.due_date) continue

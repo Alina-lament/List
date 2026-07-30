@@ -13,6 +13,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import type { Task } from '@shared/types'
 import type { CalendarTaskInstance } from '@/types/calendar'
 import { api } from '@/lib/api'
+import { parseDateKey } from '@/lib/date-utils'
 import { AppShell } from '@/components/layout/AppShell'
 import { TaskListView } from '@/features/tasks/components/TaskListView'
 import { CalendarView } from '@/features/calendar/components/CalendarView'
@@ -46,6 +47,17 @@ export default function App() {
 
   function handleDragStart(event: DragStartEvent) {
     setActiveDrag((event.active.data.current as ActiveDrag) ?? null)
+  }
+
+  function shiftDateKey(key: string, deltaDays: number): string {
+    const d = parseDateKey(key)
+    d.setDate(d.getDate() + deltaDays)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  function daysBetween(a: string, b: string): number {
+    const diff = parseDateKey(b).getTime() - parseDateKey(a).getTime()
+    return Math.round(diff / (24 * 60 * 60 * 1000))
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -84,6 +96,15 @@ export default function App() {
             due_time: instance.due_time,
             priority: instance.priority,
             reminder_minutes: instance.reminder_minutes,
+          })
+        } else if (instance.is_range_instance && instance.range_start && instance.range_end) {
+          // 范围任务：整体平移
+          const delta = daysBetween(instance.date, date)
+          const task = await api.getTaskById(instance.task_id)
+          await tasksStore.updateTask(instance.task_id, {
+            due_date: task?.due_date ? shiftDateKey(task.due_date, delta) : null,
+            start_date: shiftDateKey(instance.range_start, delta),
+            end_date: shiftDateKey(instance.range_end, delta),
           })
         } else {
           await tasksStore.updateTaskDueDate(instance.task_id, date)

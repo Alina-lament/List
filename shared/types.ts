@@ -16,6 +16,8 @@ export interface Task {
   is_completed: 0 | 1
   due_date: string | null
   due_time: string | null
+  start_date: string | null
+  end_date: string | null
   priority: 0 | 1 | 2 | 3
   sort_order: number
   is_recurring: 0 | 1
@@ -61,6 +63,8 @@ export interface CreateTaskInput {
   description?: string
   due_date?: string | null
   due_time?: string | null
+  start_date?: string | null
+  end_date?: string | null
   priority?: 0 | 1 | 2 | 3
   is_recurring?: 0 | 1
   rrule?: string | null
@@ -77,6 +81,8 @@ export interface UpdateTaskInput {
   is_completed?: 0 | 1
   due_date?: string | null
   due_time?: string | null
+  start_date?: string | null
+  end_date?: string | null
   priority?: 0 | 1 | 2 | 3
   is_recurring?: 0 | 1
   rrule?: string | null

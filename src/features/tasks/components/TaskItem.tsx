@@ -50,7 +50,7 @@ interface TaskItemProps {
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
   sortable?: boolean
   variant?: 'default' | 'overdue'
-  /** 全清单视图时显示清单图标 */
+  /** 全清单视图时显示清单信息 */
   list?: List
   /** 子任务样式 */
   isSubtask?: boolean
@@ -79,6 +79,7 @@ export const TaskItem = memo(function TaskItem({
   const today = todayKey()
   const isToday = !completed && task.due_date === today
   const isOverdue = variant === 'overdue' || (!completed && task.due_date !== null && task.due_date < today)
+  const priorityColor = PRIORITY_COLORS[task.priority]
 
   return (
     <div
@@ -99,6 +100,13 @@ export const TaskItem = memo(function TaskItem({
               : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
       } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >
+      {/* 左侧优先级颜色条 */}
+      <div
+        className="w-1 self-stretch rounded-full"
+        style={{ backgroundColor: priorityColor || '#e2e8f0' }}
+        aria-hidden="true"
+      />
+
       {sortable && !isSubtask && (
         <span
           {...attributes}
@@ -117,26 +125,31 @@ export const TaskItem = memo(function TaskItem({
           </svg>
         </span>
       )}
+
       <input
         type="checkbox"
         checked={completed}
         onChange={() => onToggle(task)}
         className="h-4 w-4 shrink-0 cursor-pointer rounded border-canvas-3"
       />
-      {list && (
-        <span title={list.name}>
-          <ListIcon list={list} size={16} />
+
+      <div className="min-w-0 flex-1 flex flex-col">
+        <span
+          className={`truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
+            completed ? 'text-ink-4 line-through' : 'text-ink'
+          }`}
+        >
+          {task.title}
         </span>
-      )}
-      <span
-        className={`flex-1 truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
-          completed ? 'text-ink-4 line-through' : 'text-ink'
-        }`}
-      >
-        {task.title}
-      </span>
+        {list && (
+          <div className="flex items-center gap-1 mt-0.5 text-xs text-ink-3">
+            <ListIcon list={list} size={12} />
+            <span className="truncate">{list.name}</span>
+          </div>
+        )}
+      </div>
+
       {task.is_recurring === 1 && <RecurrenceIcon />}
-      <PriorityFlag priority={task.priority} />
       {tagNames.map((name) => (
         <span key={name} className="rounded-lg bg-canvas-2 px-2 py-0.5 text-[10px] font-medium text-ink-2">
           {name}

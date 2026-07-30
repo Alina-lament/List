@@ -6,6 +6,7 @@ import { SettingsDialog } from '@/features/settings/components/SettingsDialog'
 import { useLayoutStore } from './layoutStore'
 import { ListIconPicker } from '@/features/lists/components/ListIconPicker'
 import { ListIcon } from '@/features/lists/components/ListIcon'
+import { api } from '@/lib/api'
 
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [

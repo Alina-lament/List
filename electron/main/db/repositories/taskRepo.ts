@@ -26,8 +26,8 @@ export interface TaskRepository {
 }
 
 const TASK_COLUMNS = `id, list_id, title, description, is_completed, due_date, due_time,
-  priority, sort_order, is_recurring, rrule, rrule_end_date, reminder_minutes,
-  last_reminded_at, parent_task_id, created_at, updated_at`
+  start_date, end_date, priority, sort_order, is_recurring, rrule, rrule_end_date,
+  reminder_minutes, last_reminded_at, parent_task_id, created_at, updated_at`
 
 const UPDATABLE_FIELDS = [
   'list_id',
@@ -36,6 +36,8 @@ const UPDATABLE_FIELDS = [
   'is_completed',
   'due_date',
   'due_time',
+  'start_date',
+  'end_date',
   'priority',
   'is_recurring',
   'rrule',
@@ -62,10 +64,14 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
       const nonRecurring = db
         .prepare(
           `SELECT ${TASK_COLUMNS} FROM tasks
-           WHERE due_date BETWEEN ? AND ? AND is_recurring = 0
+           WHERE is_recurring = 0
+             AND (
+               due_date BETWEEN ? AND ?
+               OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
+             )
            ORDER BY due_date, priority DESC, sort_order`,
         )
-        .all(start, end) as Task[]
+        .all(start, end, end, start) as Task[]
 
       const recurring = db
         .prepare(
@@ -109,9 +115,9 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
         db.prepare(
           `INSERT INTO tasks (
              id, list_id, title, description, is_completed, due_date, due_time,
-             priority, sort_order, is_recurring, rrule, rrule_end_date,
+             start_date, end_date, priority, sort_order, is_recurring, rrule, rrule_end_date,
              reminder_minutes, last_reminded_at, parent_task_id, created_at, updated_at
-           ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+           ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
         ).run(
           id,
           input.list_id,
@@ -119,6 +125,8 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
           input.description ?? '',
           input.due_date ?? null,
           input.due_time ?? null,
+          input.start_date ?? null,
+          input.end_date ?? null,
           input.priority ?? 0,
           nextOrder,
           input.is_recurring ?? 0,

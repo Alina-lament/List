@@ -182,6 +182,15 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_countdowns_archived ON countdowns(is_archived);
     `,
   },
+  {
+    version: 7,
+    sql: `
+      ALTER TABLE tasks ADD COLUMN start_date TEXT;
+      ALTER TABLE tasks ADD COLUMN end_date TEXT;
+
+      CREATE INDEX idx_tasks_date_range ON tasks(start_date, end_date);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {
