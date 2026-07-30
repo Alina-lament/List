@@ -96,6 +96,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
     if (!open) return
     if (task) {
       // 编辑模式：预填任务数据
+      const initialTags = taskTags[task.id] ?? []
       setTitle(task.title)
       setDescription(task.description)
       setListId(task.list_id)
@@ -104,7 +105,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       setPriority(task.priority)
       setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
       setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
-      setTagIds(taskTags[task.id] ?? [])
+      setTagIds(initialTags)
       initialRef.current = {
         list_id: task.list_id,
         title: task.title.trim(),
@@ -116,7 +117,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
         is_recurring: task.is_recurring,
         rrule: task.rrule,
         rrule_end_date: task.rrule_end_date,
-        tag_ids: taskTags[task.id] ?? [],
+        tag_ids: initialTags,
       }
     } else {
       // 新建模式：清空
@@ -142,7 +143,9 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
     dirtyRef.current = false
     setSaveStatus('idle')
     setPanel(null)
-  }, [open, task, defaultListId, defaultDueDate, selectedListId, lists, taskTags])
+    // 只在对话框打开或任务身份变化时重置；避免 taskTags 等外部变化把用户编辑冲掉
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, task?.id, defaultListId, defaultDueDate, selectedListId, lists])
 
   // 编辑模式下字段变化自动保存
   useEffect(() => {
@@ -464,7 +467,11 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault()
+                void handleSave()
+              }}
               className={`w-full bg-transparent text-2xl font-bold text-ink placeholder:text-ink-4 focus:outline-none ${
                 completed ? 'text-ink-4 line-through' : ''
               }`}
@@ -476,6 +483,11 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => {
+                if (task && dirtyRef.current && title.trim() && listId) {
+                  void updateTask(task.id, buildPatch())
+                }
+              }}
               placeholder="添加描述…"
               className="mt-4 h-[180px] w-full resize-none bg-transparent text-base leading-relaxed text-ink-2 placeholder:text-ink-4 focus:outline-none"
             />

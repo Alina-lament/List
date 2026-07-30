@@ -43,7 +43,7 @@ export function TaskContextMenu({
   menu: ContextMenuState
   onClose: () => void
 }) {
-  const { lists, updateTask, updateTaskDueDate, createTask } = useTasksStore()
+  const { lists, updateTask, updateTaskDueDate, createTask, deleteTask } = useTasksStore()
   const [subPanel, setSubPanel] = useState<SubPanel>(null)
   const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
   const [subtaskTitle, setSubtaskTitle] = useState('')
@@ -307,6 +307,24 @@ export function TaskContextMenu({
             <span>添加子任务</span>
           </button>
         )}
+      </div>
+
+      {/* 删除任务 */}
+      <div className="relative border-t border-canvas-3">
+        <button
+          onClick={() => {
+            if (window.confirm(`删除任务「${task.title}」？`)) {
+              void deleteTask(task.id, task.list_id)
+            }
+            onClose()
+          }}
+          className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-medium text-prihigh transition-colors hover:bg-red-50"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+            <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>删除任务</span>
+        </button>
       </div>
     </div>
   )

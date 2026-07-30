@@ -179,7 +179,8 @@ export function TaskListView() {
       onSelect: selectTask,
       onContextMenu: (e: React.MouseEvent, t: Task) => {
         e.preventDefault()
-        setContextMenu({ x: e.clientX, y: e.clientY, task: t })
+        // 菜单显示在鼠标右侧，避免遮挡当前任务
+        setContextMenu({ x: e.clientX + 8, y: e.clientY, task: t })
       },
       variant: (extra?.variant ?? 'default') as 'default' | 'overdue',
       listColor: isAllView ? meta?.color : undefined,

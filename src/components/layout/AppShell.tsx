@@ -1,8 +1,6 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { useTasksStore } from '@/features/tasks/store'
 import { useSettingsStore } from '@/features/settings/store'
-import { Button } from '@/components/ui/Button'
-import { TaskFormDialog } from '@/features/tasks/components/TaskFormDialog'
 import { ResizeHandle } from './ResizeHandle'
 import { SIDEBAR_WIDTH, useLayoutStore } from './layoutStore'
 import { Sidebar } from './Sidebar'
@@ -16,10 +14,9 @@ const PRIORITY_SHORTCUTS: Record<string, number> = {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { lists, selectedTaskId, tasksByList, view, updateTask } = useTasksStore()
+  const { selectedTaskId, tasksByList, updateTask } = useTasksStore()
   const { sidebarWidth, setSidebarWidth, saveSidebarWidth, init: initLayout } = useLayoutStore()
   const { bgImageDataUrl, bgOpacity, bgBlur, bgScale, bgGlassIntensity } = useSettingsStore()
-  const [showCreate, setShowCreate] = useState(false)
 
   useEffect(() => {
     void initLayout()
@@ -85,29 +82,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             backdropFilter: `blur(${(bgGlassIntensity / 100) * 14}px)`,
           }}
         >
-          {/* 顶栏：右侧新建任务（每日/日记/倒数日视图不显示此按钮） */}
-          {view !== 'daily' && view !== 'journal' && view !== 'countdown' && (
-            <div
-              className="flex items-center justify-end px-6 py-3 shadow-sm"
-              style={{
-                backgroundColor: `rgba(var(--color-card-bg-rgb), ${0.35 + (bgGlassIntensity / 100) * 0.45})`,
-                backdropFilter: `blur(${(bgGlassIntensity / 100) * 10}px)`,
-              }}
-            >
-              <Button variant="primary" size="sm" onClick={() => setShowCreate(true)} disabled={lists.length === 0}>
-                + 新建任务
-              </Button>
-            </div>
-          )}
           <div className="min-h-0 flex-1">{children}</div>
         </main>
 
-        <TaskFormDialog
-          open={showCreate}
-          onClose={() => setShowCreate(false)}
-          task={null}
-          defaultListId={null}
-        />
       </div>
     </div>
   )

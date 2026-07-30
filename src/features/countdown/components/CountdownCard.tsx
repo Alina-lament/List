@@ -42,7 +42,7 @@ export function CountdownCard({ countdown, onClick }: CountdownCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group relative flex aspect-[4/3] flex-col justify-between overflow-hidden rounded-2xl border border-canvas-3 bg-white p-4 text-left shadow-card transition-all hover:shadow-card-lg"
+      className="group relative flex aspect-[4/3] flex-col items-center justify-between overflow-hidden rounded-2xl border border-canvas-3 bg-white p-4 text-center shadow-card transition-all hover:shadow-card-lg"
     >
       {bgUrl && (
         <img
@@ -51,15 +51,22 @@ export function CountdownCard({ countdown, onClick }: CountdownCardProps) {
           className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-40 transition-opacity group-hover:opacity-50"
         />
       )}
+      {/* 顶部：目标日期 */}
       <div className="relative z-10">
-        <h3 className="line-clamp-2 text-base font-bold text-ink">{countdown.title}</h3>
-        <p className="mt-1 text-xs text-ink-3">{countdown.target_date}</p>
+        <p className="text-xs font-medium text-ink-3">{countdown.target_date}</p>
       </div>
-      <div className="relative z-10 flex items-end justify-between">
+
+      {/* 中部：标题 */}
+      <div className="relative z-10 flex flex-1 items-center justify-center py-2">
+        <h3 className="line-clamp-3 text-lg font-bold text-ink">{countdown.title}</h3>
+      </div>
+
+      {/* 底部：剩余天数 + 文案 */}
+      <div className="relative z-10 flex flex-col items-center">
         <span className={`text-3xl font-extrabold tracking-tight ${remaining === 0 ? 'text-royal' : remaining < 0 ? 'text-ink-3' : 'text-ink'}`}>
           {remaining === 0 ? '今天' : Math.abs(remaining)}
         </span>
-        <span className="mb-1 text-[11px] font-medium text-ink-3">{label}</span>
+        <span className="mt-0.5 text-[11px] font-medium text-ink-3">{label}</span>
       </div>
     </button>
   )

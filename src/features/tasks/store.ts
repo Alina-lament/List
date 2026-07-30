@@ -108,8 +108,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   async selectList(id) {
     const reqId = get()._reqId + 1
-    // 同步立即更新选中高亮，异步加载任务数据
-    set({ selectedListId: id, selectedTaskId: null, _reqId: reqId })
+    // 同步立即更新选中高亮并切回清单任务视图，异步加载任务数据
+    set({ selectedListId: id, selectedTaskId: null, view: 'list', _reqId: reqId })
     try {
       const tasks = await api.getTasksByList(id)
       if (get()._reqId !== reqId) return

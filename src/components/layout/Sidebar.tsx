@@ -251,17 +251,17 @@ export function Sidebar() {
       <div className="mx-5 mt-3 h-px bg-canvas-3/40" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        <div className="mb-2 flex items-center justify-between px-2">
-          <button
-            className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3 transition-colors hover:text-ink"
-            onClick={() => setListsExpanded((v) => !v)}
-          >
+        <div
+          className="mb-2 flex cursor-pointer items-center justify-between rounded-lg px-2 py-1 transition-colors hover:bg-white/40"
+          onClick={() => setListsExpanded((v) => !v)}
+        >
+          <span className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3 transition-colors hover:text-ink">
             <span className={`inline-block transition-transform ${listsExpanded ? 'rotate-90' : ''}`}>▸</span>
             清单
-          </button>
+          </span>
           <button
             className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
-            onClick={() => setAddingList(true)}
+            onClick={(e) => { e.stopPropagation(); setAddingList(true) }}
             aria-label="新建清单"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
