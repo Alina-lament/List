@@ -100,9 +100,12 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   },
 
   setView(view) {
-    set({ view })
     if (view === 'list') {
+      set({ view })
       void get().selectAllLists()
+    } else {
+      // 切换到非清单视图时立即取消清单选中高亮
+      set({ view, selectedListId: null, selectedTaskId: null })
     }
   },
 

@@ -1,8 +1,9 @@
 import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task } from '@shared/types'
+import type { List, Task } from '@shared/types'
 import { todayKey } from '@/lib/date-utils'
+import { ListIcon } from '@/features/lists/components/ListIcon'
 
 // 优先级三色：现代鲜明色相
 export const PRIORITY_COLORS: Record<number, string> = {
@@ -49,9 +50,8 @@ interface TaskItemProps {
   onContextMenu?: (e: React.MouseEvent, task: Task) => void
   sortable?: boolean
   variant?: 'default' | 'overdue'
-  /** 全清单视图时显示清单信息 */
-  listColor?: string
-  listName?: string
+  /** 全清单视图时显示清单图标 */
+  list?: List
   /** 子任务样式 */
   isSubtask?: boolean
 }
@@ -66,8 +66,7 @@ export const TaskItem = memo(function TaskItem({
   onContextMenu,
   sortable = true,
   variant = 'default',
-  listColor,
-  listName,
+  list,
   isSubtask = false,
 }: TaskItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -124,12 +123,10 @@ export const TaskItem = memo(function TaskItem({
         onChange={() => onToggle(task)}
         className="h-4 w-4 shrink-0 cursor-pointer rounded border-canvas-3"
       />
-      {listColor && (
-        <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: listColor }}
-          title={listName}
-        />
+      {list && (
+        <span title={list.name}>
+          <ListIcon list={list} size={16} />
+        </span>
       )}
       <span
         className={`flex-1 truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${

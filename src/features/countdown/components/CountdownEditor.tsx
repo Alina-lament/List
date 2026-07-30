@@ -16,6 +16,7 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
   const [title, setTitle] = useState('')
   const [targetDate, setTargetDate] = useState('')
   const [intervalDays, setIntervalDays] = useState('')
+  const [bgImagePath, setBgImagePath] = useState<string | null>(null)
   const [bgPreview, setBgPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -25,6 +26,7 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
       setTitle(countdown.title)
       setTargetDate(countdown.target_date)
       setIntervalDays(countdown.interval_days?.toString() ?? '')
+      setBgImagePath(countdown.bg_image_path ?? null)
       if (countdown.bg_image_path) {
         void api.getCountdownBgDataUrl(countdown.id).then((url) => setBgPreview(url))
       } else {
@@ -34,6 +36,7 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
       setTitle('')
       setTargetDate(todayKey())
       setIntervalDays('')
+      setBgImagePath(null)
       setBgPreview(null)
     }
   }, [open, countdown])
@@ -47,7 +50,7 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
         title: name,
         target_date: targetDate,
         interval_days: intervalDays ? Number(intervalDays) : null,
-        bg_image_path: countdown?.bg_image_path ?? null,
+        bg_image_path: bgImagePath,
       })
       onClose()
     } finally {
@@ -59,7 +62,8 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
     if (!countdown) return
     const path = await api.openImageFileDialog()
     if (!path) return
-    await api.setCountdownBg(countdown.id, path)
+    const updated = await api.setCountdownBg(countdown.id, path)
+    setBgImagePath(updated.bg_image_path)
     const url = await api.getCountdownBgDataUrl(countdown.id)
     setBgPreview(url)
   }
@@ -67,6 +71,7 @@ export function CountdownEditor({ open, onClose, countdown, onSave, onDelete }: 
   async function handleBgClear() {
     if (!countdown) return
     await api.updateCountdown(countdown.id, { bg_image_path: null })
+    setBgImagePath(null)
     setBgPreview(null)
   }
 

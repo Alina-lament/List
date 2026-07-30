@@ -4,9 +4,9 @@ import { useSettingsStore } from '@/features/settings/store'
 import { ColorPicker } from '@/components/ui/ColorPicker'
 import { SettingsDialog } from '@/features/settings/components/SettingsDialog'
 import { useLayoutStore } from './layoutStore'
-import { api } from '@/lib/api'
 import { ListIconPicker } from '@/features/lists/components/ListIconPicker'
-import type { List } from '@shared/types'
+import { ListIcon } from '@/features/lists/components/ListIcon'
+
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
   {
@@ -64,40 +64,6 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
     ),
   },
 ]
-
-function ListIcon({ list, size = 16 }: { list: List; size?: number }) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!list.icon) {
-      setUrl(null)
-      return
-    }
-    let mounted = true
-    api.getListIconDataUrl(list.id).then((dataUrl) => {
-      if (mounted) setUrl(dataUrl)
-    })
-    return () => { mounted = false }
-  }, [list.id, list.icon])
-
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt=""
-        className="shrink-0 object-contain"
-        style={{ width: size, height: size }}
-      />
-    )
-  }
-
-  return (
-    <span
-      className="shrink-0 rounded-full shadow-sm"
-      style={{ width: size * 0.75, height: size * 0.75, backgroundColor: list.color }}
-    />
-  )
-}
 
 export function Sidebar() {
   const {

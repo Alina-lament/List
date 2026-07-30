@@ -58,7 +58,7 @@ export function CountdownCard({ countdown, onClick }: CountdownCardProps) {
 
       {/* 中部：标题 */}
       <div className="relative z-10 flex flex-1 items-center justify-center py-2">
-        <h3 className="line-clamp-3 text-lg font-bold text-ink">{countdown.title}</h3>
+        <h3 className="line-clamp-3 text-2xl font-bold text-ink">{countdown.title}</h3>
       </div>
 
       {/* 底部：剩余天数 + 文案 */}

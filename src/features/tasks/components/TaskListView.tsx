@@ -183,8 +183,7 @@ export function TaskListView() {
         setContextMenu({ x: e.clientX + 8, y: e.clientY, task: t })
       },
       variant: (extra?.variant ?? 'default') as 'default' | 'overdue',
-      listColor: isAllView ? meta?.color : undefined,
-      listName: isAllView ? meta?.name : undefined,
+      list: isAllView ? meta : undefined,
       isSubtask: extra?.isSubtask ?? false,
     }
   }
