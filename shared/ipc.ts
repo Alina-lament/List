@@ -14,6 +14,9 @@ export const IpcChannels = {
   listsUpdate: 'lists:update',
   listsDelete: 'lists:delete',
   listsReorder: 'lists:reorder',
+  listsSetIcon: 'lists:setIcon',
+  listsGetIconDataUrl: 'lists:getIconDataUrl',
+  listsListBuiltinIcons: 'lists:listBuiltinIcons',
   tagsGetAll: 'tags:getAll',
   tagsGetAllTaskTags: 'tags:getAllTaskTags',
   tagsCreate: 'tags:create',
@@ -63,6 +66,15 @@ export const IpcChannels = {
   journalDelete: 'journal:delete',
   journalGetLastYear: 'journal:getLastYear',
   journalGetMarkedDates: 'journal:getMarkedDates',
+
+  // countdowns
+  countdownGetAll: 'countdown:getAll',
+  countdownCreate: 'countdown:create',
+  countdownUpdate: 'countdown:update',
+  countdownDelete: 'countdown:delete',
+  countdownAdvance: 'countdown:advance',
+  countdownSetBg: 'countdown:setBg',
+  countdownGetBgDataUrl: 'countdown:getBgDataUrl',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

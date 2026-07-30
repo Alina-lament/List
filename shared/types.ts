@@ -2,6 +2,7 @@ export interface List {
   id: string
   name: string
   color: string
+  icon: string
   sort_order: number
   created_at: string
   updated_at: string
@@ -184,6 +185,32 @@ export interface UpdateDailyRoutineInput {
   items?: { title: string; target_count: number }[]
 }
 
+// ── Countdowns ──
+export interface Countdown {
+  id: string
+  title: string
+  target_date: string // YYYY-MM-DD
+  bg_image_path: string | null
+  interval_days: number | null
+  is_archived: 0 | 1
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateCountdownInput {
+  title: string
+  target_date: string
+  bg_image_path?: string | null
+  interval_days?: number | null
+}
+
+export interface UpdateCountdownInput {
+  title?: string
+  target_date?: string
+  bg_image_path?: string | null
+  interval_days?: number | null
+}
+
 export const DEFAULT_SETTINGS: Record<string, string> = {
   sidebarBg: '#f4f5f7',
   canvasBg: '#fdfdfc',
@@ -210,4 +237,5 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   sidebarWidth: '240',
   detailWidth: '384',
   scrollSensitivity: '200',
+  calendarWeekCount: '4',
 }

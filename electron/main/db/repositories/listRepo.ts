@@ -4,8 +4,9 @@ import type { List } from '@shared/types'
 
 export interface ListRepository {
   getAll(): List[]
-  create(name: string, color?: string): List
-  update(id: string, patch: { name?: string; color?: string }): List
+  getById(id: string): List | undefined
+  create(name: string, color?: string, icon?: string): List
+  update(id: string, patch: { name?: string; color?: string; icon?: string }): List
   reorder(ids: string[]): void
   remove(id: string): void
 }
@@ -16,7 +17,11 @@ export function createListRepository(db: AppDatabase): ListRepository {
       return db.prepare('SELECT * FROM lists ORDER BY sort_order').all() as List[]
     },
 
-    create(name, color) {
+    getById(id) {
+      return db.prepare('SELECT * FROM lists WHERE id = ?').get(id) as List | undefined
+    },
+
+    create(name, color, icon) {
       const id = randomUUID()
       const now = new Date().toISOString()
       const next = (
@@ -25,8 +30,8 @@ export function createListRepository(db: AppDatabase): ListRepository {
         }
       ).next
       db.prepare(
-        'INSERT INTO lists (id, name, color, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(id, name, color ?? '#6366f1', next, now, now)
+        'INSERT INTO lists (id, name, color, icon, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ).run(id, name, color ?? '#6366f1', icon ?? '', next, now, now)
       return db.prepare('SELECT * FROM lists WHERE id = ?').get(id) as List
     },
 
@@ -40,6 +45,10 @@ export function createListRepository(db: AppDatabase): ListRepository {
       if (patch.color !== undefined) {
         sets.push('color = ?')
         values.push(patch.color)
+      }
+      if (patch.icon !== undefined) {
+        sets.push('icon = ?')
+        values.push(patch.icon)
       }
       sets.push('updated_at = ?')
       values.push(new Date().toISOString(), id)

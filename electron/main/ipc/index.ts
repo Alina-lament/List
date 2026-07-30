@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
 import { IpcChannels } from '@shared/ipc'
-import type { CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { CountdownRepository } from '../db/repositories/countdownRepo'
 import type { DailyRepository } from '../db/repositories/dailyRepo'
 import type { JournalRepository } from '../db/repositories/journalRepo'
 import type { ListRepository } from '../db/repositories/listRepo'
@@ -8,8 +9,8 @@ import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { syncTaskbarIcon } from '../iconSync'
-import { join } from 'path'
-import { readdirSync, readFileSync, copyFileSync, existsSync, unlinkSync } from 'fs'
+import { extname, join } from 'path'
+import { readdirSync, readFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 
 export interface Repositories {
   tasks: TaskRepository
@@ -18,11 +19,16 @@ export interface Repositories {
   settings: SettingsRepository
   daily: DailyRepository
   journal: JournalRepository
+  countdowns: CountdownRepository
   dataRoot: string
 }
 
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+}
+
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings, daily, journal, dataRoot } = repos
+  const { tasks, lists, tags, settings, daily, journal, countdowns, dataRoot } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -48,14 +54,65 @@ export function registerIpcHandlers(repos: Repositories): void {
   )
 
   ipcMain.handle(IpcChannels.listsGetAll, () => lists.getAll())
-  ipcMain.handle(IpcChannels.listsCreate, (_e, name: string, color?: string) =>
-    lists.create(name, color),
+  ipcMain.handle(IpcChannels.listsCreate, (_e, name: string, color?: string, icon?: string) =>
+    lists.create(name, color, icon),
   )
-  ipcMain.handle(IpcChannels.listsUpdate, (_e, id: string, patch: { name?: string; color?: string }) =>
+  ipcMain.handle(IpcChannels.listsUpdate, (_e, id: string, patch: { name?: string; color?: string; icon?: string }) =>
     lists.update(id, patch),
   )
   ipcMain.handle(IpcChannels.listsDelete, (_e, id: string) => lists.remove(id))
   ipcMain.handle(IpcChannels.listsReorder, (_e, ids: string[]) => lists.reorder(ids))
+
+  // ── List icons ──
+  const listIconsDir = join(dataRoot, 'icons', 'lists')
+  const builtinIconsDir = app.isPackaged
+    ? join(process.resourcesPath, 'build', 'list-icons')
+    : join(app.getAppPath(), 'build', 'list-icons')
+
+  function listIconFilePath(listId: string): string | null {
+    const list = lists.getById(listId)
+    if (!list || !list.icon) return null
+    if (list.icon.startsWith('custom:')) {
+      const fileName = list.icon.slice(7)
+      return join(listIconsDir, fileName)
+    }
+    if (list.icon.startsWith('builtin:')) {
+      const fileName = list.icon.slice(8)
+      return join(builtinIconsDir, fileName)
+    }
+    return null
+  }
+
+  ipcMain.handle(IpcChannels.listsSetIcon, (_e, listId: string, filePath: string) => {
+    ensureDir(listIconsDir)
+    const ext = extname(filePath).toLowerCase() || '.png'
+    const destName = `${listId}${ext}`
+    const dest = join(listIconsDir, destName)
+    // 移除该清单旧的自定义图标（避免同名残留）
+    if (existsSync(listIconsDir)) {
+      for (const f of readdirSync(listIconsDir)) {
+        if (f.startsWith(`${listId}.`)) unlinkSync(join(listIconsDir, f))
+      }
+    }
+    copyFileSync(filePath, dest)
+    return dest
+  })
+
+  ipcMain.handle(IpcChannels.listsGetIconDataUrl, (_e, listId: string) => {
+    const filePath = listIconFilePath(listId)
+    if (!filePath || !existsSync(filePath)) return null
+    const buf = readFileSync(filePath)
+    const ext = filePath.split('.').pop()?.toLowerCase() ?? 'png'
+    const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
+  })
+
+  ipcMain.handle(IpcChannels.listsListBuiltinIcons, () => {
+    if (!existsSync(builtinIconsDir)) return []
+    return readdirSync(builtinIconsDir)
+      .filter((f) => /\.(svg|png|jpg|jpeg|webp|gif)$/i.test(f))
+      .map((f) => ({ name: f, content: readFileSync(join(builtinIconsDir, f), 'utf-8') }))
+  })
 
   ipcMain.handle(IpcChannels.tagsGetAll, () => tags.getAll())
   ipcMain.handle(IpcChannels.tagsGetAllTaskTags, () => tags.getAllTaskTags())
@@ -214,5 +271,40 @@ export function registerIpcHandlers(repos: Repositories): void {
         unlinkSync(join(bgDir, f))
       }
     }
+  })
+
+  // ── Countdowns ──
+  const countdownBgDir = join(dataRoot, 'countdowns')
+
+  ipcMain.handle(IpcChannels.countdownGetAll, () => countdowns.getAll())
+  ipcMain.handle(IpcChannels.countdownCreate, (_e, input: CreateCountdownInput) =>
+    countdowns.create(input),
+  )
+  ipcMain.handle(IpcChannels.countdownUpdate, (_e, id: string, patch: UpdateCountdownInput) =>
+    countdowns.update(id, patch),
+  )
+  ipcMain.handle(IpcChannels.countdownDelete, (_e, id: string) => countdowns.remove(id))
+  ipcMain.handle(IpcChannels.countdownAdvance, () => countdowns.advance())
+  ipcMain.handle(IpcChannels.countdownSetBg, (_e, id: string, filePath: string) => {
+    ensureDir(countdownBgDir)
+    const ext = extname(filePath).toLowerCase() || '.jpg'
+    const dest = join(countdownBgDir, `${id}${ext}`)
+    // 移除旧背景图
+    if (existsSync(countdownBgDir)) {
+      for (const f of readdirSync(countdownBgDir)) {
+        if (f.startsWith(`${id}.`)) unlinkSync(join(countdownBgDir, f))
+      }
+    }
+    copyFileSync(filePath, dest)
+    return countdowns.update(id, { bg_image_path: dest }) as Countdown
+  })
+  ipcMain.handle(IpcChannels.countdownGetBgDataUrl, (_e, id: string) => {
+    const all = countdowns.getAll()
+    const c = all.find((x) => x.id === id)
+    if (!c?.bg_image_path || !existsSync(c.bg_image_path)) return null
+    const buf = readFileSync(c.bg_image_path)
+    const ext = c.bg_image_path.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
   })
 }

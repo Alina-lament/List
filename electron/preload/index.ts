@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Api } from '@shared/api'
 import { IpcChannels } from '@shared/ipc'
-import type { CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
 
 const api: Api = {
   getTasksByDateRange: (start, end) =>
@@ -22,10 +22,13 @@ const api: Api = {
     ipcRenderer.invoke(IpcChannels.tasksCreateException, input),
 
   getLists: () => ipcRenderer.invoke(IpcChannels.listsGetAll),
-  createList: (name, color) => ipcRenderer.invoke(IpcChannels.listsCreate, name, color),
+  createList: (name, color, icon) => ipcRenderer.invoke(IpcChannels.listsCreate, name, color, icon),
   updateList: (id, patch) => ipcRenderer.invoke(IpcChannels.listsUpdate, id, patch),
   deleteList: (id) => ipcRenderer.invoke(IpcChannels.listsDelete, id),
   reorderLists: (ids) => ipcRenderer.invoke(IpcChannels.listsReorder, ids),
+  setListIcon: (listId, filePath) => ipcRenderer.invoke(IpcChannels.listsSetIcon, listId, filePath),
+  getListIconDataUrl: (listId) => ipcRenderer.invoke(IpcChannels.listsGetIconDataUrl, listId),
+  listBuiltinIcons: () => ipcRenderer.invoke(IpcChannels.listsListBuiltinIcons),
 
   getTags: () => ipcRenderer.invoke(IpcChannels.tagsGetAll),
   getAllTaskTags: () => ipcRenderer.invoke(IpcChannels.tagsGetAllTaskTags),
@@ -80,6 +83,15 @@ const api: Api = {
   deleteJournal: (date) => ipcRenderer.invoke(IpcChannels.journalDelete, date),
   getJournalLastYear: (date) => ipcRenderer.invoke(IpcChannels.journalGetLastYear, date),
   getJournalMarkedDates: (start, end) => ipcRenderer.invoke(IpcChannels.journalGetMarkedDates, start, end),
+
+  // Countdowns
+  getCountdowns: () => ipcRenderer.invoke(IpcChannels.countdownGetAll),
+  createCountdown: (input: CreateCountdownInput) => ipcRenderer.invoke(IpcChannels.countdownCreate, input),
+  updateCountdown: (id, patch: UpdateCountdownInput) => ipcRenderer.invoke(IpcChannels.countdownUpdate, id, patch),
+  deleteCountdown: (id) => ipcRenderer.invoke(IpcChannels.countdownDelete, id),
+  advanceCountdowns: () => ipcRenderer.invoke(IpcChannels.countdownAdvance),
+  setCountdownBg: (id, filePath) => ipcRenderer.invoke(IpcChannels.countdownSetBg, id, filePath),
+  getCountdownBgDataUrl: (id) => ipcRenderer.invoke(IpcChannels.countdownGetBgDataUrl, id),
 }
 
 contextBridge.exposeInMainWorld('api', api)

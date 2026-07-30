@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeImage, shell } from 'electron'
 import { join } from 'path'
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'fs'
 import { initDatabase } from './db'
+import { createCountdownRepository } from './db/repositories/countdownRepo'
 import { createDailyRepository } from './db/repositories/dailyRepo'
 import { createJournalRepository } from './db/repositories/journalRepo'
 import { createListRepository } from './db/repositories/listRepo'
@@ -103,8 +104,10 @@ app.whenReady().then(() => {
 
   ensureDir(join(dataRoot, 'db'))
   ensureDir(join(dataRoot, 'icons'))
+  ensureDir(join(dataRoot, 'icons', 'lists'))
   ensureDir(join(dataRoot, 'backgrounds'))
   ensureDir(join(dataRoot, 'brand'))
+  ensureDir(join(dataRoot, 'countdowns'))
 
   const dbPath = join(dataRoot, 'db', 'younglife.db')
   const db = initDatabase(dbPath)
@@ -115,8 +118,9 @@ app.whenReady().then(() => {
   const settings = createSettingsRepository(db)
   const daily = createDailyRepository(db)
   const journal = createJournalRepository(db)
+  const countdowns = createCountdownRepository(db)
 
-  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, dataRoot })
+  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, countdowns, dataRoot })
   startReminderScheduler(tasks)
 
   // 迁移后修正图标路径（从旧安装目录 → 新 userData 目录）

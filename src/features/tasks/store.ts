@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
 
-export type ViewMode = 'list' | 'calendar' | 'daily' | 'journal'
+export type ViewMode = 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
 
 interface TasksState {
   lists: List[]
@@ -22,8 +22,11 @@ interface TasksState {
   selectAllLists(): Promise<void>
   selectTask(id: string | null): void
 
-  createList(name: string, color?: string): Promise<void>
+  createList(name: string, color?: string, icon?: string): Promise<void>
   renameList(id: string, name: string): Promise<void>
+  updateListIcon(id: string, filePath: string): Promise<void>
+  setListIconFromBuiltin(id: string, fileName: string): Promise<void>
+  clearListIcon(id: string): Promise<void>
   deleteList(id: string): Promise<void>
 
   createTask(input: CreateTaskInput): Promise<Task>
@@ -136,13 +139,29 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set({ selectedTaskId: id })
   },
 
-  async createList(name, color) {
-    const list = await api.createList(name, color)
+  async createList(name, color, icon) {
+    const list = await api.createList(name, color, icon)
     set((s) => ({ lists: [...s.lists, list], selectedListId: list.id, tasksByList: { ...s.tasksByList, [list.id]: [] } }))
   },
 
   async renameList(id, name) {
     const updated = await api.updateList(id, { name })
+    set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
+  },
+
+  async updateListIcon(id, filePath) {
+    await api.setListIcon(id, filePath)
+    const updated = await api.updateList(id, { icon: `custom:${id}${filePath.slice(filePath.lastIndexOf('.'))}` })
+    set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
+  },
+
+  async setListIconFromBuiltin(id, fileName) {
+    const updated = await api.updateList(id, { icon: `builtin:${fileName}` })
+    set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
+  },
+
+  async clearListIcon(id) {
+    const updated = await api.updateList(id, { icon: '' })
     set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
   },
 

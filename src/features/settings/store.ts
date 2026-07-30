@@ -32,6 +32,7 @@ export interface SettingsState {
   brandImageUrl: string | null  // data URL，启动时加载
   // 日历
   scrollSensitivity: number
+  calendarWeekCount: number
   // 操作状态
   loading: boolean
   // 动作
@@ -44,6 +45,7 @@ export interface SettingsState {
   setBrandName(name: string): Promise<void>
   setBrandImage(filePath: string): Promise<void>
   clearBrandImage(): Promise<void>
+  setCalendarWeekCount(n: number): Promise<void>
   applyPreset(name: string): Promise<void>
   resetDefaults(): Promise<void>
 }
@@ -110,6 +112,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   brandName: getDefault('brandName'),
   brandImageUrl: null,
   scrollSensitivity: Number(getDefault('scrollSensitivity')) || 200,
+  calendarWeekCount: Number(getDefault('calendarWeekCount')) || 4,
   loading: false,
 
   async init() {
@@ -139,6 +142,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         appIconPath: map.appIconPath || null,
         brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
+        calendarWeekCount: Number(map.calendarWeekCount) || 4,
         bgImagePath: await api.getBgImagePath(),
         bgImageDataUrl: await api.getBgImageDataUrl(),
         loading: false,
@@ -198,6 +202,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     await api.clearBrandImage()
     await api.updateSetting('brandImagePath', '')
     set({ brandImageUrl: null })
+  },
+
+  async setCalendarWeekCount(n) {
+    await api.updateSetting('calendarWeekCount', String(n))
+    set({ calendarWeekCount: n })
   },
 
   async applyPreset(name) {

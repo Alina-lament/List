@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { useCalendarStore } from '../store'
 import { useSettingsStore } from '@/features/settings/store'
 import { useDailyStore } from '@/features/daily/store'
+import { useTasksStore } from '@/features/tasks/store'
 import { CalendarCell } from './CalendarCell'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 import { TaskFormDialog } from '@/features/tasks/components/TaskFormDialog'
@@ -23,11 +24,17 @@ export function CalendarView() {
   const { year, month, weekCount, instancesByDate, loading, shiftMonth, goToday, setWeekCount, fetchMonth } =
     useCalendarStore()
   const { routines: dailyRoutines, completions: dailyCompletions } = useDailyStore()
+  const { selectedListId } = useTasksStore()
+  const { calendarWeekCount, setCalendarWeekCount } = useSettingsStore()
   const [dialog, setDialog] = useState<DialogState>(null)
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
   const wheelAccum = useRef(0)
 
+  // 启动时从设置恢复周数
   useEffect(() => {
+    if ([1, 2, 4].includes(calendarWeekCount)) {
+      setWeekCount(calendarWeekCount as 1 | 2 | 4)
+    }
     void fetchMonth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -40,7 +47,17 @@ export function CalendarView() {
   const grid = getMonthGrid(year, month)
   const weeks = gridToWeeks(grid)
 
-  // 预计算每天活跃的每日任务
+  // 按选中清单过滤任务实例
+  const filteredInstancesByDate = useMemo(() => {
+    if (!selectedListId) return instancesByDate
+    const filtered: Record<string, CalendarTaskInstance[]> = {}
+    for (const [date, arr] of Object.entries(instancesByDate)) {
+      filtered[date] = arr.filter((i) => i.list_id === selectedListId)
+    }
+    return filtered
+  }, [instancesByDate, selectedListId])
+
+  // 预计算每天活跃的每日任务，并按选中清单过滤
   const dailyByDate = useMemo(() => {
     const map: Record<string, { routine: typeof dailyRoutines[0]; item: { id: string; title: string; target_count: number } }[]> = {}
     if (dailyRoutines.length === 0) return map
@@ -50,6 +67,7 @@ export function CalendarView() {
       ).getDay()
       const entries: typeof map[string] = []
       for (const r of dailyRoutines) {
+        if (selectedListId && r.list_id !== selectedListId) continue
         if (!r.active) continue
         const days = JSON.parse(r.days_of_week || '[]') as number[]
         if (days.length > 0 && !days.includes(dayOfWeek)) continue
@@ -61,7 +79,7 @@ export function CalendarView() {
       map[date] = entries
     }
     return map
-  }, [grid, dailyRoutines])
+  }, [grid, dailyRoutines, selectedListId])
 
   // 过滤掉完全不包含当前月份的周（首尾可能全部是其他月份）
   const visibleWeeks = weeks.filter((w) =>
@@ -148,6 +166,7 @@ export function CalendarView() {
               key={n}
               onClick={() => {
                 setWeekCount(n)
+                void setCalendarWeekCount(n)
                 setSelectedWeekStart(null)
               }}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
@@ -193,7 +212,7 @@ export function CalendarView() {
                   date={date}
                   year={year}
                   month={month}
-                  instances={instancesByDate[date] ?? []}
+                  instances={filteredInstancesByDate[date] ?? []}
                   dailyEntries={dailyByDate[date] ?? []}
                   dailyCompletions={dailyCompletions}
                   onToggleInstance={handleToggle}
@@ -214,7 +233,7 @@ export function CalendarView() {
       {selectedWeekStart && selectedWeekDays && (
         <WeekDetail
           weekDays={selectedWeekDays}
-          instancesByDate={instancesByDate}
+          instancesByDate={filteredInstancesByDate}
           dailyByDate={dailyByDate}
           dailyCompletions={dailyCompletions}
           onToggleInstance={handleToggle}

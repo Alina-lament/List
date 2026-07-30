@@ -18,9 +18,11 @@ import { TaskListView } from '@/features/tasks/components/TaskListView'
 import { CalendarView } from '@/features/calendar/components/CalendarView'
 import { DailyView } from '@/features/daily/components/DailyView'
 import { JournalView } from '@/features/journal/components/JournalView'
+import { CountdownView } from '@/features/countdown/components/CountdownView'
 import { useTasksStore } from '@/features/tasks/store'
 import { useCalendarStore } from '@/features/calendar/store'
 import { useDailyStore } from '@/features/daily/store'
+import { useCountdownStore } from '@/features/countdown/store'
 import { ReminderToastHost } from '@/features/reminders/ReminderToastHost'
 
 type ActiveDrag =
@@ -31,12 +33,14 @@ type ActiveDrag =
 export default function App() {
   const { init, view, error, clearError } = useTasksStore()
   const initDaily = useDailyStore((s) => s.init)
+  const initCountdown = useCountdownStore((s) => s.init)
   const [activeDrag, setActiveDrag] = useState<ActiveDrag>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
     void init()
     void initDaily()
+    void initCountdown()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -129,8 +133,10 @@ export default function App() {
           <CalendarView />
         ) : view === 'daily' ? (
           <DailyView />
-        ) : (
+        ) : view === 'journal' ? (
           <JournalView />
+        ) : (
+          <CountdownView />
         )}
       </AppShell>
       <ReminderToastHost />

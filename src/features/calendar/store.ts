@@ -7,6 +7,7 @@ import { getMonthGrid, shiftMonth } from '@/lib/date-utils'
 interface CalendarState {
   year: number
   month: number
+  weekCount: 1 | 2 | 4
   instancesByDate: Record<string, CalendarTaskInstance[]>
   loaded: boolean
   loading: boolean
@@ -14,6 +15,7 @@ interface CalendarState {
   setMonth(year: number, month: number): void
   shiftMonth(delta: number): void
   goToday(): void
+  setWeekCount(n: 1 | 2 | 4): void
   fetchMonth(): Promise<void>
   refreshIfLoaded(): Promise<void>
 }
@@ -23,6 +25,7 @@ const now = new Date()
 export const useCalendarStore = create<CalendarState>()((set, get) => ({
   year: now.getFullYear(),
   month: now.getMonth() + 1,
+  weekCount: 4,
   instancesByDate: {},
   loaded: false,
   loading: false,
@@ -41,6 +44,10 @@ export const useCalendarStore = create<CalendarState>()((set, get) => ({
   goToday() {
     const d = new Date()
     get().setMonth(d.getFullYear(), d.getMonth() + 1)
+  },
+
+  setWeekCount(n) {
+    set({ weekCount: n })
   },
 
   async fetchMonth() {

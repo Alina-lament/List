@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTasksStore, type ViewMode } from '@/features/tasks/store'
 import { useSettingsStore } from '@/features/settings/store'
 import { ColorPicker } from '@/components/ui/ColorPicker'
 import { SettingsDialog } from '@/features/settings/components/SettingsDialog'
 import { useLayoutStore } from './layoutStore'
 import { api } from '@/lib/api'
+import { ListIconPicker } from '@/features/lists/components/ListIconPicker'
+import type { List } from '@shared/types'
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
   {
@@ -51,7 +53,51 @@ const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
       </svg>
     ),
   },
+  {
+    key: 'countdown',
+    label: '倒数日',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ]
+
+function ListIcon({ list, size = 16 }: { list: List; size?: number }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!list.icon) {
+      setUrl(null)
+      return
+    }
+    let mounted = true
+    api.getListIconDataUrl(list.id).then((dataUrl) => {
+      if (mounted) setUrl(dataUrl)
+    })
+    return () => { mounted = false }
+  }, [list.id, list.icon])
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className="shrink-0 object-contain"
+        style={{ width: size, height: size }}
+      />
+    )
+  }
+
+  return (
+    <span
+      className="shrink-0 rounded-full shadow-sm"
+      style={{ width: size * 0.75, height: size * 0.75, backgroundColor: list.color }}
+    />
+  )
+}
 
 export function Sidebar() {
   const {
@@ -76,6 +122,8 @@ export function Sidebar() {
   const [addingTag, setAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [listsExpanded, setListsExpanded] = useState(true)
+  const [iconPickerId, setIconPickerId] = useState<string | null>(null)
   const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
   const narrow = sidebarWidth < 210
   const { brandName, brandImageUrl, setBrandName, setBrandImage, clearBrandImage, bgGlassIntensity } = useSettingsStore()
@@ -203,7 +251,14 @@ export function Sidebar() {
       <div className="mx-5 mt-3 h-px bg-canvas-3/40" />
 
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        <div className="mb-2 flex items-center justify-end px-2">
+        <div className="mb-2 flex items-center justify-between px-2">
+          <button
+            className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3 transition-colors hover:text-ink"
+            onClick={() => setListsExpanded((v) => !v)}
+          >
+            <span className={`inline-block transition-transform ${listsExpanded ? 'rotate-90' : ''}`}>▸</span>
+            清单
+          </button>
           <button
             className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-white/70 hover:text-ink"
             onClick={() => setAddingList(true)}
@@ -215,69 +270,80 @@ export function Sidebar() {
           </button>
         </div>
 
-        <div className="space-y-0.5">
-          {lists.map((list) => {
-            const selected = list.id === selectedListId
-            return (
-              <div
-                key={list.id}
-                className={`group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-150 ${
-                  selected
-                    ? 'bg-white text-ink font-medium shadow-card ring-1 ring-ink/5'
-                    : 'text-ink-2 hover:bg-white/60 hover:text-ink'
-                }`}
-              >
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full shadow-sm"
-                  style={{ backgroundColor: list.color }}
-                />
-                {renamingId === list.id ? (
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={submitRename}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') submitRename()
-                      if (e.key === 'Escape') setRenamingId(null)
-                    }}
-                    className="w-full rounded-lg border border-royal bg-canvas px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-royal-50/50"
-                  />
-                ) : (
-                  <>
-                    <button
-                      className="flex-1 truncate text-left"
-                      onClick={() => selectList(list.id)}
-                    >
-                      {list.name}
-                    </button>
-                    <button
-                      className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-ink group-hover:block"
-                      onClick={() => {
-                        setRenamingId(list.id)
-                        setRenameValue(list.name)
+        {listsExpanded && (
+          <div className="space-y-0.5">
+            {lists.map((list) => {
+              const selected = list.id === selectedListId
+              const showPicker = iconPickerId === list.id
+              return (
+                <div
+                  key={list.id}
+                  className={`group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-150 ${
+                    selected
+                      ? 'bg-white text-ink font-medium shadow-card ring-1 ring-ink/5'
+                      : 'text-ink-2 hover:bg-white/60 hover:text-ink'
+                  }`}
+                >
+                  <button
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-canvas-2"
+                    onClick={(e) => { e.stopPropagation(); setIconPickerId(showPicker ? null : list.id) }}
+                    title="点击更换图标"
+                  >
+                    <ListIcon list={list} size={16} />
+                  </button>
+                  {showPicker && (
+                    <div className="absolute left-8 top-8 z-30">
+                      <ListIconPicker listId={list.id} onClose={() => setIconPickerId(null)} />
+                    </div>
+                  )}
+                  {renamingId === list.id ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={submitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') submitRename()
+                        if (e.key === 'Escape') setRenamingId(null)
                       }}
-                      aria-label="重命名"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-prihigh group-hover:block"
-                      onClick={() => {
-                        if (window.confirm(`删除清单「${list.name}」及其所有任务？`)) {
-                          void deleteList(list.id)
-                        }
-                      }}
-                      aria-label="删除"
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                      className="w-full rounded-lg border border-royal bg-canvas px-2 py-1 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-royal-50/50"
+                    />
+                  ) : (
+                    <>
+                      <button
+                        className="flex-1 truncate text-left"
+                        onClick={() => selectList(list.id)}
+                      >
+                        {list.name}
+                      </button>
+                      <button
+                        className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-ink group-hover:block"
+                        onClick={() => {
+                          setRenamingId(list.id)
+                          setRenameValue(list.name)
+                        }}
+                        aria-label="重命名"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="hidden shrink-0 rounded p-0.5 text-xs text-ink-3 hover:text-prihigh group-hover:block"
+                        onClick={() => {
+                          if (window.confirm(`删除清单「${list.name}」及其所有任务？`)) {
+                            void deleteList(list.id)
+                          }
+                        }}
+                        aria-label="删除"
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {addingList && (
           <div className="mt-2 space-y-2.5 rounded-xl border border-canvas-3 bg-white p-3 shadow-card">

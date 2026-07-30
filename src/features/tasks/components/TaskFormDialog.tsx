@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Task } from '@shared/types'
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react'
 import { RecurrenceRuleEditor, type RecurrenceValue } from '@/features/recurring/RecurrenceRuleEditor'
@@ -69,7 +69,28 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   const [panel, setPanel] = useState<PanelKind>(null)
   const [timePanel, setTimePanel] = useState<'hour' | 'min' | null>(null)
   const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const completed = Boolean(task?.is_completed)
+
+  const initialRef = useRef<ReturnType<typeof buildPatch> | null>(null)
+  const dirtyRef = useRef(false)
+  const saveTimerRef = useRef<number | null>(null)
+
+  function buildPatch() {
+    return {
+      list_id: listId,
+      title: title.trim(),
+      description,
+      due_date: dueDate || null,
+      due_time: dueTime || null,
+      priority,
+      reminder_minutes: reminder === '' ? null : Number(reminder),
+      is_recurring: (recurrence.rrule ? 1 : 0) as 0 | 1,
+      rrule: recurrence.rrule,
+      rrule_end_date: recurrence.rrule_end_date,
+      tag_ids: tagIds,
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -84,6 +105,19 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
       setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
       setTagIds(taskTags[task.id] ?? [])
+      initialRef.current = {
+        list_id: task.list_id,
+        title: task.title.trim(),
+        description: task.description,
+        due_date: task.due_date,
+        due_time: task.due_time,
+        priority: task.priority,
+        reminder_minutes: task.reminder_minutes,
+        is_recurring: task.is_recurring,
+        rrule: task.rrule,
+        rrule_end_date: task.rrule_end_date,
+        tag_ids: taskTags[task.id] ?? [],
+      }
     } else {
       // 新建模式：清空
       setTitle('')
@@ -103,40 +137,75 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       setReminder('')
       setRecurrence({ rrule: null, rrule_end_date: null })
       setTagIds([])
+      initialRef.current = null
     }
+    dirtyRef.current = false
+    setSaveStatus('idle')
     setPanel(null)
   }, [open, task, defaultListId, defaultDueDate, selectedListId, lists, taskTags])
 
+  // 编辑模式下字段变化自动保存
+  useEffect(() => {
+    if (!task || !initialRef.current) return
+    const current = buildPatch()
+    const initial = initialRef.current
+    const changed =
+      initial.list_id !== current.list_id ||
+      initial.title !== current.title ||
+      initial.description !== current.description ||
+      initial.due_date !== current.due_date ||
+      initial.due_time !== current.due_time ||
+      initial.priority !== current.priority ||
+      initial.reminder_minutes !== current.reminder_minutes ||
+      initial.is_recurring !== current.is_recurring ||
+      initial.rrule !== current.rrule ||
+      initial.rrule_end_date !== current.rrule_end_date ||
+      initial.tag_ids.length !== current.tag_ids.length ||
+      initial.tag_ids.some((id, i) => id !== current.tag_ids[i])
+
+    if (!changed) {
+      dirtyRef.current = false
+      return
+    }
+
+    dirtyRef.current = true
+    setSaveStatus('saving')
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      if (!title.trim() || !listId) {
+        setSaveStatus('idle')
+        return
+      }
+      const patch = buildPatch()
+      void updateTask(task.id, patch).then(() => {
+        initialRef.current = patch
+        dirtyRef.current = false
+        setSaveStatus('saved')
+        window.setTimeout(() => setSaveStatus('idle'), 1200)
+      })
+    }, 800)
+
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    }
+  }, [title, description, listId, dueDate, dueTime, priority, reminder, recurrence, tagIds, task, updateTask])
+
   async function handleSave() {
     if (!title.trim() || !listId) return
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
     if (task) {
-      await updateTask(task.id, {
-        list_id: listId,
-        title: title.trim(),
-        description,
-        due_date: dueDate || null,
-        due_time: dueTime || null,
-        priority,
-        reminder_minutes: reminder === '' ? null : Number(reminder),
-        is_recurring: (recurrence.rrule ? 1 : 0) as 0 | 1,
-        rrule: recurrence.rrule,
-        rrule_end_date: recurrence.rrule_end_date,
-        tag_ids: tagIds,
-      })
+      await updateTask(task.id, buildPatch())
     } else {
-      await createTask({
-        list_id: listId,
-        title: title.trim(),
-        description,
-        due_date: dueDate || null,
-        due_time: dueTime || null,
-        priority,
-        reminder_minutes: reminder === '' ? null : Number(reminder),
-        is_recurring: (recurrence.rrule ? 1 : 0) as 0 | 1,
-        rrule: recurrence.rrule,
-        rrule_end_date: recurrence.rrule_end_date,
-        tag_ids: tagIds,
-      })
+      await createTask(buildPatch())
+    }
+    onClose()
+  }
+
+  async function handleClose() {
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    if (task && dirtyRef.current && title.trim() && listId) {
+      await updateTask(task.id, buildPatch())
+      dirtyRef.current = false
     }
     onClose()
   }
@@ -164,7 +233,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   })()
 
   return (
-    <Dialog open={open} onClose={onClose} className="relative z-50">
+    <Dialog open={open} onClose={() => void handleClose()} className="relative z-50">
       <div className="fixed inset-0 bg-ink/30 backdrop-blur-sm" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <DialogPanel className="relative w-full max-w-2xl overflow-visible rounded-2xl bg-white shadow-card-xl ring-1 ring-ink/5">
@@ -172,11 +241,18 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
 
           {/* ====== 标题栏 ====== */}
           <div className="flex items-center justify-between border-b border-canvas-3 px-6 py-5">
-            <DialogTitle className="text-xl font-bold text-ink">
-              {task ? '编辑任务' : '新建任务'}
-            </DialogTitle>
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-xl font-bold text-ink">
+                {task ? '编辑任务' : '新建任务'}
+              </DialogTitle>
+              {task && saveStatus !== 'idle' && (
+                <span className={`text-[11px] font-medium ${saveStatus === 'saving' ? 'text-ink-4' : 'text-emerald-500'}`}>
+                  {saveStatus === 'saving' ? '保存中…' : '已保存'}
+                </span>
+              )}
+            </div>
             <button
-              onClick={onClose}
+              onClick={() => void handleClose()}
               className="rounded-lg p-1.5 text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink"
               aria-label="关闭"
             >
@@ -435,19 +511,21 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto shrink-0 text-ink-3"><path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
 
-                {/* 分隔线 + 保存 / 删除 */}
+                {/* 分隔线 + 创建 / 删除 */}
                 <div className="mt-0.5 border-t border-canvas-3 pt-0.5">
-                  <button
-                    onClick={() => { setPanel(null); handleSave(); }}
-                    disabled={!title.trim() || !listId}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-medium text-royal transition-colors hover:bg-royal-50 disabled:opacity-40"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                      <path d="M17 21v-8H7v8M7 3v5h8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    {task ? '保存' : '创建'}
-                  </button>
+                  {!task && (
+                    <button
+                      onClick={() => { setPanel(null); void handleSave(); }}
+                      disabled={!title.trim() || !listId}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-[13px] font-medium text-royal transition-colors hover:bg-royal-50 disabled:opacity-40"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <path d="M17 21v-8H7v8M7 3v5h8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      创建
+                    </button>
+                  )}
                   {task && (
                     <button
                       onClick={() => { setPanel(null); handleDelete(); }}

@@ -9,22 +9,23 @@ import { todayKey } from '@/lib/date-utils'
 
 export function DailyView() {
   const { routines, completions, loading, increment, decrement } = useDailyStore()
-  const { lists } = useTasksStore()
+  const { lists, selectedListId } = useTasksStore()
   const [editing, setEditing] = useState<DailyRoutine | null>(null)
   const [showCreate, setShowCreate] = useState(false)
 
   const today = todayKey()
 
-  // 今天应显示的 routines
+  // 今天应显示的 routines（按选中清单过滤）
   const todaysRoutines = useMemo(() => {
     const todayDow = new Date().getDay()
     return routines.filter((r) => {
+      if (selectedListId && r.list_id !== selectedListId) return false
       if (!r.active) return false
       const days = JSON.parse(r.days_of_week || '[]') as number[]
       if (days.length === 0) return true
       return days.includes(todayDow)
     })
-  }, [routines])
+  }, [routines, selectedListId])
 
   // 完成统计
   const stats = useMemo(() => {
@@ -110,12 +111,12 @@ export function DailyView() {
         )}
 
         {/* 未激活的 routines */}
-        {routines.filter((r) => !todaysRoutines.includes(r) && r.active).length > 0 && (
+        {routines.filter((r) => (!selectedListId || r.list_id === selectedListId) && !todaysRoutines.includes(r) && r.active).length > 0 && (
           <div className="mt-8">
             <p className="mb-3 text-xs font-semibold text-ink-3 uppercase tracking-wide">其他日期的任务</p>
             <div className="space-y-2 opacity-60">
               {routines
-                .filter((r) => !todaysRoutines.includes(r) && r.active)
+                .filter((r) => (!selectedListId || r.list_id === selectedListId) && !todaysRoutines.includes(r) && r.active)
                 .map((routine) => {
                   const days = JSON.parse(routine.days_of_week || '[]') as number[]
                   const names = ['日', '一', '二', '三', '四', '五', '六']
