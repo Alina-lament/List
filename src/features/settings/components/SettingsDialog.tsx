@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Input'
 import { useSettingsStore } from '../store'
 import { ColorSettingRow } from './ColorSettingRow'
 import { api } from '@/lib/api'
+import type { CloseBehavior } from '@shared/types'
 
 type TabKey = 'quick' | 'colors' | 'background' | 'icons'
 
@@ -123,7 +124,15 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 // ── 快捷设置标签页（快捷键）──
 function QuickTab() {
   const scrollSensitivity = useSettingsStore((s) => s.scrollSensitivity)
+  const closeBehavior = useSettingsStore((s) => s.closeBehavior)
   const updateSetting = useSettingsStore((s) => s.updateColor)
+  const updateCloseBehavior = useSettingsStore((s) => s.updateCloseBehavior)
+
+  const CLOSE_BEHAVIOR_OPTIONS: { value: CloseBehavior; label: string }[] = [
+    { value: 'ask', label: '每次询问' },
+    { value: 'tray', label: '最小化到系统托盘' },
+    { value: 'quit', label: '直接退出应用' },
+  ]
 
   const SHORTCUTS = [
     { keys: 'Ctrl + 1', desc: '高优先级', color: '#f43f5e' },
@@ -177,6 +186,29 @@ function QuickTab() {
             <span className="text-[10px] text-ink-4">灵敏 (50px)</span>
             <span className="text-[10px] text-ink-4">迟钝 (500px)</span>
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-canvas-3 pt-4">
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase">关闭窗口时</h3>
+        <p className="mb-3 text-xs text-ink-4">选择点击窗口关闭按钮后的默认行为</p>
+        <div className="space-y-2">
+          {CLOSE_BEHAVIOR_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink transition-colors hover:bg-canvas-2"
+            >
+              <input
+                type="radio"
+                name="closeBehavior"
+                value={opt.value}
+                checked={closeBehavior === opt.value}
+                onChange={(e) => updateCloseBehavior(e.target.value as CloseBehavior)}
+                className="accent-royal"
+              />
+              {opt.label}
+            </label>
+          ))}
         </div>
       </div>
     </div>

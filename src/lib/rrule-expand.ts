@@ -48,13 +48,26 @@ function buildInstance(
 }
 
 function sortInstances(a: CalendarTaskInstance, b: CalendarTaskInstance): number {
-  if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
-  if (a.priority !== b.priority) return b.priority - a.priority
-  if ((a.due_time ?? '') !== (b.due_time ?? '')) {
-    if (a.due_time === null) return 1
-    if (b.due_time === null) return -1
-    return a.due_time < b.due_time ? -1 : 1
+  // 时间段任务排在最上方，保证跨天显示时同一任务在每一天处于同一水平线
+  if (a.is_range_instance !== b.is_range_instance) return a.is_range_instance ? -1 : 1
+
+  // 非时间段任务：按完成状态、优先级、时间、名称排序
+  if (!a.is_range_instance) {
+    if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1
+    if (a.priority !== b.priority) return b.priority - a.priority
+    if ((a.due_time ?? '') !== (b.due_time ?? '')) {
+      if (a.due_time === null) return 1
+      if (b.due_time === null) return -1
+      return a.due_time < b.due_time ? -1 : 1
+    }
+    return a.title.localeCompare(b.title, 'zh-CN')
   }
+
+  // 时间段任务：按开始日期升序（越早开始越靠上）、优先级降序、名称排序
+  if ((a.range_start ?? '') !== (b.range_start ?? '')) {
+    return (a.range_start ?? '').localeCompare(b.range_start ?? '')
+  }
+  if (a.priority !== b.priority) return b.priority - a.priority
   return a.title.localeCompare(b.title, 'zh-CN')
 }
 

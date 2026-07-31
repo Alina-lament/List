@@ -14,7 +14,6 @@ interface Props {
   instances: CalendarTaskInstance[]
   dailyEntries: { routine: DailyRoutine; item: { id: string; title: string; target_count: number } }[]
   dailyCompletions: DailyCompletion[]
-  onToggleInstance: (instance: CalendarTaskInstance) => void
   onEditInstance: (instance: CalendarTaskInstance) => void
   onCreateAt: (date: string) => void
   onSelectWeek?: () => void
@@ -28,7 +27,6 @@ export const CalendarCell = memo(function CalendarCell({
   instances,
   dailyEntries,
   dailyCompletions,
-  onToggleInstance,
   onEditInstance,
   onCreateAt,
   onSelectWeek,
@@ -86,7 +84,6 @@ export const CalendarCell = memo(function CalendarCell({
             <CalendarTaskBlock
               key={instance.instance_id}
               instance={instance}
-              onToggle={onToggleInstance}
               onEdit={onEditInstance}
             />
           ))}

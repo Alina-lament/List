@@ -412,37 +412,46 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
                     </div>
                     {/* 时间段选择 */}
                     <div className="mt-3 border-t border-canvas-3 pt-3">
-                      <div className="mb-2 text-[11px] font-medium text-ink-3">时间段（可选）</div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <label className="mb-1 block text-[10px] text-ink-4">开始</label>
-                          <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setStartDate(v)
-                              if (endDate && v && endDate < v) setEndDate(v)
-                            }}
-                            className="w-full rounded-xl border border-canvas-3 bg-canvas px-2 py-1.5 text-xs text-ink focus:border-royal focus:outline-none"
-                          />
-                        </div>
-                        <span className="mt-4 text-xs text-ink-4">—</span>
-                        <div className="flex-1">
-                          <label className="mb-1 block text-[10px] text-ink-4">结束</label>
-                          <input
-                            type="date"
-                            value={endDate}
-                            min={startDate}
-                            onChange={(e) => {
-                              const v = e.target.value
-                              setEndDate(v)
-                              if (startDate && v && v < startDate) setStartDate(v)
-                            }}
-                            className="w-full rounded-xl border border-canvas-3 bg-canvas px-2 py-1.5 text-xs text-ink focus:border-royal focus:outline-none"
-                          />
-                        </div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold tracking-wide text-ink-3">时间段</span>
+                        {(startDate || endDate) && (
+                          <button
+                            onClick={() => { setStartDate(''); setEndDate('') }}
+                            className="text-[10px] text-ink-4 transition-colors hover:text-prihigh"
+                          >
+                            清除
+                          </button>
+                        )}
                       </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={startDate}
+                          placeholder="开始"
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setStartDate(v)
+                            if (endDate && v && endDate < v) setEndDate(v)
+                          }}
+                          className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                        />
+                        <span className="text-xs text-ink-3">—</span>
+                        <input
+                          type="date"
+                          value={endDate}
+                          min={startDate}
+                          placeholder="结束"
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setEndDate(v)
+                            if (startDate && v && v < startDate) setStartDate(v)
+                          }}
+                          className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                        />
+                      </div>
+                      {startDate && endDate && startDate > endDate && (
+                        <p className="mt-1.5 text-[10px] text-prihigh">结束日期不能早于开始日期</p>
+                      )}
                     </div>
 
                     <div className="mt-3 flex justify-between">

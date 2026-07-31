@@ -96,6 +96,8 @@ export function TaskDetailPanel({ onEditTask }: { onEditTask?: () => void }) {
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [priority, setPriority] = useState<0 | 1 | 2 | 3>(0)
   const [reminder, setReminder] = useState('')
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({ rrule: null, rrule_end_date: null })
@@ -112,6 +114,8 @@ export function TaskDetailPanel({ onEditTask }: { onEditTask?: () => void }) {
     setDescription(task.description)
     setDueDate(task.due_date ?? '')
     setDueTime(task.due_time ?? '')
+    setStartDate(task.start_date ?? '')
+    setEndDate(task.end_date ?? '')
     setPriority(task.priority)
     setReminder(task.reminder_minutes != null ? String(task.reminder_minutes) : '')
     setRecurrence({ rrule: task.rrule, rrule_end_date: task.rrule_end_date })
@@ -158,6 +162,11 @@ export function TaskDetailPanel({ onEditTask }: { onEditTask?: () => void }) {
   const completed = Boolean(task.is_completed)
 
   const dateLabel = (() => {
+    if (startDate && endDate) {
+      const [, sm, sd] = startDate.split('-').map(Number)
+      const [, em, ed] = endDate.split('-').map(Number)
+      return `${sm}月${sd}日 — ${em}月${ed}日`
+    }
     if (!dueDate) return ''
     const [, m, d] = dueDate.split('-').map(Number)
     let s = `${m}月${d}日`
@@ -305,12 +314,63 @@ export function TaskDetailPanel({ onEditTask }: { onEditTask?: () => void }) {
                   </div>
                 </div>
               </div>
+              {/* 时间段选择 */}
+              <div className="mt-3 border-t border-canvas-3 pt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold tracking-wide text-ink-3">时间段</span>
+                  {(startDate || endDate) && (
+                    <button
+                      onClick={() => {
+                        setStartDate('')
+                        setEndDate('')
+                        void commit({ start_date: null, end_date: null })
+                      }}
+                      className="text-[10px] text-ink-4 transition-colors hover:text-prihigh"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      const nextEnd = endDate && v && endDate < v ? v : endDate
+                      setStartDate(v)
+                      if (nextEnd !== endDate) setEndDate(nextEnd)
+                      void commit({ start_date: v || null, end_date: nextEnd || null })
+                    }}
+                    className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                  />
+                  <span className="text-xs text-ink-3">—</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      const nextStart = startDate && v && v < startDate ? v : startDate
+                      setEndDate(v)
+                      if (nextStart !== startDate) setStartDate(nextStart)
+                      void commit({ start_date: nextStart || null, end_date: v || null })
+                    }}
+                    className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2.5 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                  />
+                </div>
+                {startDate && endDate && startDate > endDate && (
+                  <p className="mt-1.5 text-[10px] text-prihigh">结束日期不能早于开始日期</p>
+                )}
+              </div>
               <div className="mt-3 flex justify-between">
                 <button
                   onClick={() => {
                     setDueDate('')
                     setDueTime('')
-                    void commit({ due_date: null, due_time: null })
+                    setStartDate('')
+                    setEndDate('')
+                    void commit({ due_date: null, due_time: null, start_date: null, end_date: null })
                     setPanel(null)
                   }}
                   className="rounded-xl px-3 py-1.5 text-xs font-medium text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh"

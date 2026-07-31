@@ -11,6 +11,8 @@ import { DETAIL_WIDTH, useLayoutStore } from '@/components/layout/layoutStore'
 import { todayKey, pad2 } from '@/lib/date-utils'
 import { useDailyStore } from '@/features/daily/store'
 import { DailyTaskCard } from '@/features/daily/components/DailyTaskCard'
+import { useSettingsStore } from '@/features/settings/store'
+import { MiniCalendar } from '@/features/calendar/components/MiniCalendar'
 import dayjs from 'dayjs'
 
 export function TaskListView() {
@@ -28,16 +30,21 @@ export function TaskListView() {
   const [quickTitle, setQuickTitle] = useState('')
   const [quickDate, setQuickDate] = useState('')
   const [quickTime, setQuickTime] = useState('')
+  const [quickStartDate, setQuickStartDate] = useState('')
+  const [quickEndDate, setQuickEndDate] = useState('')
   const [quickPriority, setQuickPriority] = useState<0 | 1 | 2 | 3>(0)
   const [quickPanel, setQuickPanel] = useState<'date' | 'priority' | null>(null)
   const [timePanel, setTimePanel] = useState<'hour' | 'min' | null>(null)
+  const [priorityFilterOpen, setPriorityFilterOpen] = useState(false)
+  const [sortMenuOpen, setSortMenuOpen] = useState(false)
+  const { taskSortMode, setTaskSortMode } = useSettingsStore()
   const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
-  const { detailWidth, setDetailWidth, saveDetailWidth } = useLayoutStore()
+  const { detailWidth, setDetailWidth, saveDetailWidth, showDetailCalendar } = useLayoutStore()
   const {
     routines: dailyRoutines,
     completions: dailyCompletions,
@@ -60,12 +67,19 @@ export function TaskListView() {
     const source = selectedListId
       ? (tasksByList[selectedListId] ?? [])
       : Object.values(tasksByList).flat()
-    return source.filter((t) => {
+    const filtered = source.filter((t) => {
       if (priorityFilter !== -1 && t.priority !== priorityFilter) return false
       if (tagFilter && !(taskTags[t.id] ?? []).includes(tagFilter)) return false
       return true
     })
-  }, [tasksByList, selectedListId, priorityFilter, tagFilter, taskTags])
+    if (taskSortMode === 'priority') {
+      return [...filtered].sort((a, b) => b.priority - a.priority || a.title.localeCompare(b.title, 'zh-CN'))
+    }
+    if (taskSortMode === 'name') {
+      return [...filtered].sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'))
+    }
+    return filtered
+  }, [tasksByList, selectedListId, priorityFilter, tagFilter, taskTags, taskSortMode])
   const active = useMemo(() => tasks.filter((t) => !t.is_completed), [tasks])
   const completed = useMemo(() => tasks.filter((t) => t.is_completed), [tasks])
 
@@ -126,6 +140,8 @@ export function TaskListView() {
     setQuickTitle('')
     setQuickDate('')
     setQuickTime('')
+    setQuickStartDate('')
+    setQuickEndDate('')
     setQuickPriority(0)
     setQuickPanel(null)
     await createTask({
@@ -133,6 +149,8 @@ export function TaskListView() {
       title,
       due_date: quickDate || null,
       due_time: quickTime || null,
+      start_date: quickStartDate || null,
+      end_date: quickEndDate || null,
       priority: quickPriority,
     })
   }
@@ -140,6 +158,8 @@ export function TaskListView() {
   function clearQuickDate() {
     setQuickDate('')
     setQuickTime('')
+    setQuickStartDate('')
+    setQuickEndDate('')
     setQuickPanel(null)
   }
 
@@ -168,7 +188,7 @@ export function TaskListView() {
   }
 
   // 传递给 TaskItem 的通用 props 工厂
-  function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean }) {
+  function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean; sortable?: boolean }) {
     return {
       task,
       tagNames: tagNamesByTask[task.id] ?? [],
@@ -183,20 +203,20 @@ export function TaskListView() {
       variant: (extra?.variant ?? 'default') as 'default' | 'overdue',
       list: isAllView ? listById[task.list_id] : undefined,
       isSubtask: extra?.isSubtask ?? false,
+      sortable: extra?.sortable ?? true,
     }
   }
 
   /** 渲染一条任务及其子任务 */
   function renderTaskWithSubtasks(task: Task, extra?: { variant?: 'default' | 'overdue'; sortable?: boolean }) {
     const subtasks = subtasksByParent[task.id] ?? []
-    const sortable = extra?.sortable ?? true
     return (
       <div key={task.id}>
-        <TaskItem key={task.id} {...taskItemProps(task, extra)} sortable={sortable} />
+        <TaskItem key={task.id} {...taskItemProps(task, extra)} />
         {subtasks.length > 0 && (
           <div className="mt-1 space-y-1">
             {subtasks.map((sub) => (
-              <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} sortable={false} />
+              <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} />
             ))}
           </div>
         )}
@@ -210,7 +230,7 @@ export function TaskListView() {
       <div className="flex min-w-0 flex-1 flex-col px-5 py-5">
         {/* 快速添加栏 */}
         <div className="mb-3">
-          {(quickPanel || timePanel) && <div className="fixed inset-0 z-10" onClick={() => { setQuickPanel(null); setTimePanel(null) }} />}
+          {(quickPanel || timePanel || priorityFilterOpen || sortMenuOpen) && <div className="fixed inset-0 z-10" onClick={() => { setQuickPanel(null); setTimePanel(null); setPriorityFilterOpen(false); setSortMenuOpen(false) }} />}
           <div className="rounded-xl bg-canvas-2/80 ring-1 ring-canvas-3/40 transition-all duration-150 focus-within:bg-white focus-within:ring-3 focus-within:ring-royal-50/50 hover:ring-canvas-4">
             <input
               value={quickTitle}
@@ -234,7 +254,11 @@ export function TaskListView() {
                     <rect x="3" y="4" width="18" height="18" rx="2" />
                     <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" />
                   </svg>
-                  {quickDate ? quickDate.slice(5) : '日期'}
+                  {quickStartDate && quickEndDate
+                    ? `${quickStartDate.slice(5)} — ${quickEndDate.slice(5)}`
+                    : quickDate
+                      ? quickDate.slice(5)
+                      : '日期'}
                 </button>
                 {quickPanel === 'date' && (
                   <div className="absolute left-0 top-full z-20 mt-1 w-[272px] rounded-2xl border border-canvas-3 bg-white p-4 shadow-card-xl">
@@ -331,6 +355,44 @@ export function TaskListView() {
                         </div>
                       </div>
                     </div>
+                    {/* 时间段选择 */}
+                    <div className="mt-3 border-t border-canvas-3 pt-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold tracking-wide text-ink-3">时间段</span>
+                        {(quickStartDate || quickEndDate) && (
+                          <button
+                            onClick={() => { setQuickStartDate(''); setQuickEndDate('') }}
+                            className="text-[10px] text-ink-4 transition-colors hover:text-prihigh"
+                          >
+                            清除
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="date"
+                          value={quickStartDate}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setQuickStartDate(v)
+                            if (quickEndDate && v && quickEndDate < v) setQuickEndDate(v)
+                          }}
+                          className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                        />
+                        <span className="text-xs text-ink-3">—</span>
+                        <input
+                          type="date"
+                          value={quickEndDate}
+                          min={quickStartDate}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setQuickEndDate(v)
+                            if (quickStartDate && v && v < quickStartDate) setQuickStartDate(v)
+                          }}
+                          className="min-w-0 flex-1 rounded-2xl border border-canvas-3 bg-canvas px-2 py-2 text-center text-sm text-ink focus:border-royal focus:outline-none"
+                        />
+                      </div>
+                    </div>
                     <div className="mt-3 flex justify-between">
                       <button onClick={clearQuickDate} className="rounded-xl px-3 py-1.5 text-xs font-medium text-ink-3 transition-colors hover:bg-canvas-2 hover:text-prihigh">清除</button>
                       <button onClick={() => setQuickPanel(null)} className="rounded-xl bg-royal px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-royal-dark">完成</button>
@@ -369,17 +431,107 @@ export function TaskListView() {
         </div>
 
         <div className="mb-4 flex items-center gap-2 text-xs">
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(Number(e.target.value) as -1 | 0 | 1 | 2 | 3)}
-            className="rounded-lg bg-white/80 px-2.5 py-1.5 text-xs text-ink-2 ring-1 ring-canvas-3/40 focus:border-royal focus:outline-none"
-          >
-            <option value={-1}>全部优先级</option>
-            <option value={3}>🔴 高</option>
-            <option value={2}>🟠 中</option>
-            <option value={1}>🟢 低</option>
-            <option value={0}>无</option>
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => setPriorityFilterOpen((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-canvas-3/40 transition-colors hover:bg-white ${
+                priorityFilter !== -1 ? 'text-ink-2' : 'text-ink-3'
+              }`}
+            >
+              {priorityFilter === -1 ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-4">
+                  <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <FlagIcon priority={priorityFilter} size={12} />
+              )}
+              <span>
+                {priorityFilter === -1
+                  ? '全部优先级'
+                  : priorityFilter === 3
+                    ? '高'
+                    : priorityFilter === 2
+                      ? '中'
+                      : priorityFilter === 1
+                        ? '低'
+                        : '无优先级'}
+              </span>
+            </button>
+            {priorityFilterOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                {[
+                  { value: -1 as const, label: '全部优先级' },
+                  { value: 3 as const, label: '高' },
+                  { value: 2 as const, label: '中' },
+                  { value: 1 as const, label: '低' },
+                  { value: 0 as const, label: '无优先级' },
+                ].map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => { setPriorityFilter(o.value); setPriorityFilterOpen(false) }}
+                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                      priorityFilter === o.value ? 'font-medium text-royal' : 'text-ink-2'
+                    }`}
+                  >
+                    {o.value === -1 ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-4">
+                        <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <FlagIcon priority={o.value} size={12} />
+                    )}
+                    <span>{o.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 排序条件 */}
+          <div className="relative">
+            <button
+              onClick={() => setSortMenuOpen((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs ring-1 ring-canvas-3/40 transition-colors hover:bg-white ${
+                taskSortMode !== 'free' ? 'text-ink-2' : 'text-ink-3'
+              }`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-4">
+                <path d="M3 6h18M3 12h12M3 18h6" strokeLinecap="round" />
+              </svg>
+              <span>
+                {taskSortMode === 'free' ? '自由排列' : taskSortMode === 'priority' ? '优先级' : '名称'}
+              </span>
+            </button>
+            {sortMenuOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                {[
+                  { value: 'free' as const, label: '自由排列' },
+                  { value: 'priority' as const, label: '优先级' },
+                  { value: 'name' as const, label: '名称' },
+                ].map((o) => (
+                  <button
+                    key={o.value}
+                    onClick={() => { void setTaskSortMode(o.value); setSortMenuOpen(false) }}
+                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                      taskSortMode === o.value ? 'font-medium text-royal' : 'text-ink-2'
+                    }`}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={taskSortMode === o.value ? 'text-royal' : 'text-ink-4'}>
+                      {o.value === 'free' ? (
+                        <path d="M4 8h16M4 16h16" strokeLinecap="round" />
+                      ) : o.value === 'priority' ? (
+                        <path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                      ) : (
+                        <path d="M4 6h16M4 12h10M4 18h16" strokeLinecap="round" />
+                      )}
+                    </svg>
+                    <span>{o.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
@@ -405,7 +557,7 @@ export function TaskListView() {
             <p className="py-16 text-center text-sm text-ink-4">✨ 暂无待办任务</p>
           ) : !isAllView ? (
             /* 具体清单视图：显示全部活跃任务（含无日期） */
-            <SortableContext items={active.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={active.filter((t) => !t.parent_task_id).map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {active.filter((t) => !t.parent_task_id).map((task) => (
                   renderTaskWithSubtasks(task)
@@ -508,14 +660,23 @@ export function TaskListView() {
         onChange={setDetailWidth}
         onCommit={(w) => void saveDetailWidth(w)}
       />
-      <TaskDetailPanel
-        onEditTask={() => {
-          const id = selectedTaskId
-          if (!id) return
-          const t = tasks.find((x) => x.id === id)
-          if (t) setEditingTask(t)
-        }}
-      />
+      {showDetailCalendar ? (
+        <div
+          className="shrink-0 overflow-hidden rounded-2xl border border-canvas-3 bg-white/80 shadow-card-lg ring-1 ring-white/40"
+          style={{ width: detailWidth }}
+        >
+          <MiniCalendar />
+        </div>
+      ) : (
+        <TaskDetailPanel
+          onEditTask={() => {
+            const id = selectedTaskId
+            if (!id) return
+            const t = tasks.find((x) => x.id === id)
+            if (t) setEditingTask(t)
+          }}
+        />
+      )}
 
       <TaskFormDialog
         open={editingTask !== null}

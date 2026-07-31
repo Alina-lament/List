@@ -92,11 +92,14 @@ export function Sidebar() {
   const [listsExpanded, setListsExpanded] = useState(true)
   const [iconPickerId, setIconPickerId] = useState<string | null>(null)
   const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
+  const showDetailCalendar = useLayoutStore((s) => s.showDetailCalendar)
+  const setShowDetailCalendar = useLayoutStore((s) => s.setShowDetailCalendar)
   const narrow = sidebarWidth < 210
   const { brandName, brandImageUrl, setBrandName, setBrandImage, clearBrandImage, bgGlassIntensity } = useSettingsStore()
   const [editingBrand, setEditingBrand] = useState(false)
   const [brandDraft, setBrandDraft] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [todayContextMenu, setTodayContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   async function handleBrandImageClick() {
     const path = await api.openImageFileDialog()
@@ -197,10 +200,16 @@ export function Sidebar() {
           {VIEW_TABS.map((tab) => {
             const active = view === tab.key
             const bright = active && selectedListId === null
+            const isTodayTab = tab.key === 'list'
             return (
               <button
                 key={tab.key}
                 onClick={() => setView(tab.key)}
+                onContextMenu={(e) => {
+                  if (!isTodayTab) return
+                  e.preventDefault()
+                  setTodayContextMenu({ x: e.clientX, y: e.clientY })
+                }}
                 className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                   bright
                     ? 'bg-white text-ink shadow-card ring-1 ring-ink/5'
@@ -409,6 +418,44 @@ export function Sidebar() {
           设置
         </button>
       </div>
+
+      {/* 「今日」右键菜单 */}
+      {todayContextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setTodayContextMenu(null)}
+          />
+          <div
+            className="fixed z-50 w-40 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl"
+            style={{ left: todayContextMenu.x, top: todayContextMenu.y }}
+          >
+            <button
+              onClick={() => { void setShowDetailCalendar(true); setTodayContextMenu(null) }}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
+                showDetailCalendar ? 'font-medium text-royal' : 'text-ink-2'
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              显示日历
+            </button>
+            <button
+              onClick={() => { void setShowDetailCalendar(false); setTodayContextMenu(null) }}
+              className={`flex w-full items-center gap-2 px-3 py-2 text-[13px] transition-colors hover:bg-canvas-2 ${
+                !showDetailCalendar ? 'font-medium text-royal' : 'text-ink-2'
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              关闭日历
+            </button>
+          </div>
+        </>
+      )}
 
       <SettingsDialog
         open={showSettings}

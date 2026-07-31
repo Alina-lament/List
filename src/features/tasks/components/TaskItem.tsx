@@ -69,13 +69,13 @@ export const TaskItem = memo(function TaskItem({
   list,
   isSubtask = false,
 }: TaskItemProps) {
+  const completed = Boolean(task.is_completed)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `task:${task.id}`,
-    disabled: !sortable,
+    disabled: !sortable || isSubtask || completed,
     data: { type: 'task', task },
   })
 
-  const completed = Boolean(task.is_completed)
   const today = todayKey()
   const isToday = !completed && task.due_date === today
   const isOverdue = variant === 'overdue' || (!completed && task.due_date !== null && task.due_date < today)
@@ -112,10 +112,11 @@ export const TaskItem = memo(function TaskItem({
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
-          className="cursor-grab touch-none text-ink-4 opacity-0 transition-opacity group-hover:opacity-100"
-          aria-label="拖拽排序"
+          className="cursor-grab touch-none rounded-lg p-1.5 text-ink-4 transition-colors hover:bg-canvas-2"
+          aria-label="拖拽改期/排序"
+          title="拖拽到日历改期，或自由排序时调整顺序"
         >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="5" cy="3" r="1.5" />
             <circle cx="11" cy="3" r="1.5" />
             <circle cx="5" cy="8" r="1.5" />

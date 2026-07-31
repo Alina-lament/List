@@ -114,21 +114,6 @@ export function CalendarView() {
     }
   }
 
-  async function handleToggle(instance: CalendarTaskInstance) {
-    const completed = !instance.is_completed
-    if (instance.is_recurring_instance) {
-      await api.createTaskException({
-        task_id: instance.task_id,
-        exception_date: instance.date,
-        action: 'modified',
-        is_completed: completed ? 1 : 0,
-      })
-    } else {
-      await api.setTaskCompleted(instance.task_id, completed)
-    }
-    await fetchMonth()
-  }
-
   async function handleEdit(instance: CalendarTaskInstance) {
     const task = await api.getTaskById(instance.task_id)
     if (task) setDialog({ mode: 'edit', task })
@@ -215,7 +200,6 @@ export function CalendarView() {
                   instances={filteredInstancesByDate[date] ?? []}
                   dailyEntries={dailyByDate[date] ?? []}
                   dailyCompletions={dailyCompletions}
-                  onToggleInstance={handleToggle}
                   onEditInstance={handleEdit}
                   onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
                   onSelectWeek={() =>
@@ -236,7 +220,6 @@ export function CalendarView() {
           instancesByDate={filteredInstancesByDate}
           dailyByDate={dailyByDate}
           dailyCompletions={dailyCompletions}
-          onToggleInstance={handleToggle}
           onEditInstance={handleEdit}
           onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
         />
@@ -258,7 +241,6 @@ function WeekDetail({
   instancesByDate,
   dailyByDate,
   dailyCompletions,
-  onToggleInstance,
   onEditInstance,
   onCreateAt,
 }: {
@@ -266,7 +248,6 @@ function WeekDetail({
   instancesByDate: Record<string, CalendarTaskInstance[]>
   dailyByDate: Record<string, { routine: import('@shared/types').DailyRoutine; item: { id: string; title: string; target_count: number } }[]>
   dailyCompletions: import('@shared/types').DailyCompletion[]
-  onToggleInstance: (instance: CalendarTaskInstance) => void
   onEditInstance: (instance: CalendarTaskInstance) => void
   onCreateAt: (date: string) => void
 }) {
@@ -318,7 +299,6 @@ function WeekDetail({
                     <CalendarTaskBlock
                       key={instance.instance_id}
                       instance={instance}
-                      onToggle={onToggleInstance}
                       onEdit={onEditInstance}
                     />
                   ))

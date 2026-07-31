@@ -121,6 +121,8 @@ export interface DueReminder {
 }
 
 // ── Settings ──
+export type CloseBehavior = 'ask' | 'quit' | 'tray'
+
 export interface SettingsRow {
   key: string
   value: string
@@ -244,4 +246,6 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   detailWidth: '384',
   scrollSensitivity: '200',
   calendarWeekCount: '4',
+  closeBehavior: 'ask',
+  taskSortMode: 'free',
 }

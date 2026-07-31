@@ -7,9 +7,11 @@ export const DETAIL_WIDTH = { min: 300, max: 640, default: 384 }
 interface LayoutState {
   sidebarWidth: number
   detailWidth: number
+  showDetailCalendar: boolean
   init(): Promise<void>
   setSidebarWidth(width: number): void
   setDetailWidth(width: number): void
+  setShowDetailCalendar(show: boolean): Promise<void>
   saveSidebarWidth(width: number): Promise<void>
   saveDetailWidth(width: number): Promise<void>
 }
@@ -23,6 +25,7 @@ function parseWidth(value: string | undefined, fallback: number, min: number, ma
 export const useLayoutStore = create<LayoutState>()((set) => ({
   sidebarWidth: SIDEBAR_WIDTH.default,
   detailWidth: DETAIL_WIDTH.default,
+  showDetailCalendar: false,
 
   async init() {
     try {
@@ -32,6 +35,7 @@ export const useLayoutStore = create<LayoutState>()((set) => ({
       set({
         sidebarWidth: parseWidth(map.sidebarWidth, SIDEBAR_WIDTH.default, SIDEBAR_WIDTH.min, SIDEBAR_WIDTH.max),
         detailWidth: parseWidth(map.detailWidth, DETAIL_WIDTH.default, DETAIL_WIDTH.min, DETAIL_WIDTH.max),
+        showDetailCalendar: map.showDetailCalendar === 'true',
       })
     } catch {
       // 读取失败保持默认值
@@ -43,6 +47,10 @@ export const useLayoutStore = create<LayoutState>()((set) => ({
   },
   setDetailWidth(width) {
     set({ detailWidth: width })
+  },
+  async setShowDetailCalendar(show) {
+    set({ showDetailCalendar: show })
+    await api.updateSetting('showDetailCalendar', String(show))
   },
 
   async saveSidebarWidth(width) {

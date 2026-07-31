@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from '@/lib/api'
-import { DEFAULT_SETTINGS } from '@shared/types'
+import { DEFAULT_SETTINGS, type CloseBehavior } from '@shared/types'
 
 export interface SettingsState {
   // 颜色
@@ -33,11 +33,16 @@ export interface SettingsState {
   // 日历
   scrollSensitivity: number
   calendarWeekCount: number
+  // 任务列表
+  taskSortMode: 'free' | 'priority' | 'name'
+  // 窗口行为
+  closeBehavior: CloseBehavior
   // 操作状态
   loading: boolean
   // 动作
   init(): Promise<void>
   updateColor(key: string, value: string): Promise<void>
+  updateCloseBehavior(value: CloseBehavior): Promise<void>
   setBgImage(path: string): Promise<void>
   updateBgSetting(key: string, value: string | number): Promise<void>
   clearBgImage(): Promise<void>
@@ -46,6 +51,7 @@ export interface SettingsState {
   setBrandImage(filePath: string): Promise<void>
   clearBrandImage(): Promise<void>
   setCalendarWeekCount(n: number): Promise<void>
+  setTaskSortMode(mode: 'free' | 'priority' | 'name'): Promise<void>
   applyPreset(name: string): Promise<void>
   resetDefaults(): Promise<void>
 }
@@ -113,6 +119,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   brandImageUrl: null,
   scrollSensitivity: Number(getDefault('scrollSensitivity')) || 200,
   calendarWeekCount: Number(getDefault('calendarWeekCount')) || 4,
+  taskSortMode: (getDefault('taskSortMode') as 'free' | 'priority' | 'name') || 'free',
+  closeBehavior: (getDefault('closeBehavior') as CloseBehavior) || 'ask',
   loading: false,
 
   async init() {
@@ -143,6 +151,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
         calendarWeekCount: Number(map.calendarWeekCount) || 4,
+        taskSortMode: (map.taskSortMode as 'free' | 'priority' | 'name') || 'free',
+        closeBehavior: (map.closeBehavior as CloseBehavior) || 'ask',
         bgImagePath: await api.getBgImagePath(),
         bgImageDataUrl: await api.getBgImageDataUrl(),
         loading: false,
@@ -160,6 +170,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   async updateColor(key, value) {
     await api.updateSetting(key, value)
     set({ [key]: value } as Partial<SettingsState>)
+  },
+
+  async updateCloseBehavior(value) {
+    await api.updateSetting('closeBehavior', value)
+    set({ closeBehavior: value })
   },
 
   async setBgImage(path) {
@@ -207,6 +222,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   async setCalendarWeekCount(n) {
     await api.updateSetting('calendarWeekCount', String(n))
     set({ calendarWeekCount: n })
+  },
+
+  async setTaskSortMode(mode) {
+    await api.updateSetting('taskSortMode', mode)
+    set({ taskSortMode: mode })
   },
 
   async applyPreset(name) {

@@ -35,6 +35,8 @@ interface TasksState {
   deleteTask(id: string, listId: string): Promise<void>
   updateTaskDueDate(id: string, dueDate: string | null): Promise<void>
   reorderTasks(listId: string, taskIds: string[]): Promise<void>
+  reorderTasksLocal(listId: string, taskIds: string[]): void
+  moveTaskToListAndReorder(taskId: string, targetListId: string, afterTaskId: string | null): Promise<void>
 
   createTag(name: string, color?: string): Promise<Tag>
   deleteTag(id: string): Promise<void>
@@ -315,6 +317,19 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     })
   },
 
+  reorderTasksLocal(listId, taskIds) {
+    const prev = get().tasksByList[listId] ?? []
+    const order = new Map(taskIds.map((id, i) => [id, i]))
+    set((s) => ({
+      tasksByList: {
+        ...s.tasksByList,
+        [listId]: sortListTasks(
+          prev.map((t) => (order.has(t.id) ? { ...t, sort_order: order.get(t.id)! } : t)),
+        ),
+      },
+    }))
+  },
+
   async reorderTasks(listId, taskIds) {
     const prev = get().tasksByList[listId] ?? []
     const order = new Map(taskIds.map((id, i) => [id, i]))
@@ -330,6 +345,54 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       await api.reorderTasks(listId, taskIds)
     } catch (e) {
       set((s) => ({ tasksByList: { ...s.tasksByList, [listId]: prev }, error: `排序失败：${String(e)}` }))
+    }
+  },
+
+  async moveTaskToListAndReorder(taskId, targetListId, afterTaskId) {
+    const task = Object.values(get().tasksByList).flat().find((t) => t.id === taskId)
+    if (!task) return
+    const sourceListId = task.list_id
+    if (sourceListId === targetListId) return
+
+    const sourceTasks = [...(get().tasksByList[sourceListId] ?? [])]
+      .filter((t) => t.id !== taskId)
+      .sort((a, b) => a.sort_order - b.sort_order)
+    const targetTasks = [...(get().tasksByList[targetListId] ?? [])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+
+    const afterIndex = afterTaskId ? targetTasks.findIndex((t) => t.id === afterTaskId) : -1
+    const insertIndex = afterIndex >= 0 ? afterIndex + 1 : targetTasks.length
+    const newTargetTasks = [
+      ...targetTasks.slice(0, insertIndex),
+      { ...task, list_id: targetListId },
+      ...targetTasks.slice(insertIndex),
+    ]
+
+    const sourceOrderIds = sourceTasks.map((t) => t.id)
+    const targetOrderIds = newTargetTasks.map((t) => t.id)
+
+    const prevSource = get().tasksByList[sourceListId] ?? []
+    const prevTarget = get().tasksByList[targetListId] ?? []
+
+    set((s) => ({
+      tasksByList: {
+        ...s.tasksByList,
+        [sourceListId]: sortListTasks(sourceTasks.map((t, i) => ({ ...t, sort_order: i }))),
+        [targetListId]: sortListTasks(newTargetTasks.map((t, i) => ({ ...t, sort_order: i }))),
+      },
+    }))
+
+    try {
+      await api.updateTask(taskId, { list_id: targetListId })
+      await Promise.all([
+        api.reorderTasks(sourceListId, sourceOrderIds),
+        api.reorderTasks(targetListId, targetOrderIds),
+      ])
+    } catch (e) {
+      set((s) => ({
+        tasksByList: { ...s.tasksByList, [sourceListId]: prevSource, [targetListId]: prevTarget },
+        error: `移动失败：${String(e)}`,
+      }))
     }
   },
 

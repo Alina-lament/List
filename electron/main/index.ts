@@ -1,6 +1,8 @@
-import { app, BrowserWindow, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, dialog, nativeImage, shell } from 'electron'
 import { join } from 'path'
 import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'fs'
+import type { CloseBehavior } from '@shared/types'
+import { createTray, destroyTray } from './tray'
 import { initDatabase } from './db'
 import { createCountdownRepository } from './db/repositories/countdownRepo'
 import { createDailyRepository } from './db/repositories/dailyRepo'
@@ -57,6 +59,26 @@ if (process.platform === 'win32') {
   const hasValidIcon = state.iconPath && existsSync(state.iconPath)
   const aumid = hasValidIcon ? state.aumid || APP_USER_MODEL_ID : APP_USER_MODEL_ID
   app.setAppUserModelId(aumid)
+}
+
+let mainWindow: BrowserWindow | null = null
+let isQuitting = false
+
+// 单实例锁：必须在 app.whenReady() 之前请求
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  console.log('[main] 已有实例在运行，退出当前进程')
+  app.quit()
+  process.exit(0)
+} else {
+  app.on('second-instance', () => {
+    console.log('[main] 收到第二次启动请求，聚焦现有窗口')
+    const win = mainWindow
+    if (!win || win.isDestroyed()) return
+    if (win.isMinimized()) win.restore()
+    win.show()
+    win.focus()
+  })
 }
 
 function ensureDir(dir: string): void {
@@ -148,7 +170,7 @@ app.whenReady().then(() => {
       savedIcon = null
     }
   }
-  const mainWindow = createWindow(savedIcon)
+  mainWindow = createWindow(savedIcon)
 
   // 即使从 EXE 直接启动（没有关联快捷方式），也显式设置窗口的 RelaunchIconResource
   // 与 AppUserModelID，确保任务栏按钮使用用户自定义图标。
@@ -156,13 +178,93 @@ app.whenReady().then(() => {
     applyStartupTaskbarIcon(mainWindow, savedIcon, dataRoot)
   }
 
+  // 系统关机或从托盘退出时直接放行，不再询问
+  app.on('before-quit', () => {
+    isQuitting = true
+    destroyTray()
+  })
+
+  // 根据用户设置处理窗口关闭行为
+  mainWindow.on('close', (event) => {
+    if (isQuitting || !mainWindow) return
+
+    const rawBehavior = settings.get('closeBehavior')?.value
+    const behavior: CloseBehavior =
+      rawBehavior === 'quit' || rawBehavior === 'tray' ? rawBehavior : 'ask'
+
+    if (behavior === 'quit') {
+      destroyTray()
+      return
+    }
+
+    if (behavior === 'tray') {
+      event.preventDefault()
+      mainWindow.hide()
+      createTray(
+        mainWindow,
+        () => {
+          isQuitting = true
+          app.quit()
+        },
+        savedIcon,
+      )
+      return
+    }
+
+    // behavior === 'ask'：询问用户并可选记住选择
+    event.preventDefault()
+
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'question',
+        title: '关闭 YoungLife',
+        message: '您希望退出应用，还是最小化到系统托盘继续运行？',
+        buttons: ['退出应用', '最小化到托盘', '取消'],
+        defaultId: 1,
+        cancelId: 2,
+        checkboxLabel: '记住我的选择',
+        noLink: true,
+      })
+      .then(({ response, checkboxChecked }) => {
+        if (!mainWindow || response === 2) return
+        const choice: CloseBehavior = response === 0 ? 'quit' : 'tray'
+
+        if (checkboxChecked) {
+          settings.set('closeBehavior', choice)
+        }
+
+        if (choice === 'quit') {
+          isQuitting = true
+          destroyTray()
+          mainWindow.destroy()
+        } else {
+          mainWindow.hide()
+          createTray(
+            mainWindow,
+            () => {
+              isQuitting = true
+              app.quit()
+            },
+            savedIcon,
+          )
+        }
+      })
+  })
+
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const icon = settings.get('appIconPath')?.value || null
-      const win = createWindow(icon && existsSync(icon) ? icon : null)
-      if (process.platform === 'win32' && app.isPackaged && icon && existsSync(icon)) {
-        applyStartupTaskbarIcon(win, icon, dataRoot)
-      }
+    const existing = mainWindow ?? BrowserWindow.getAllWindows()[0]
+    if (existing && !existing.isDestroyed()) {
+      if (existing.isMinimized()) existing.restore()
+      existing.show()
+      existing.focus()
+      return
+    }
+
+    const icon = settings.get('appIconPath')?.value || null
+    const win = createWindow(icon && existsSync(icon) ? icon : null)
+    mainWindow = win
+    if (process.platform === 'win32' && app.isPackaged && icon && existsSync(icon)) {
+      applyStartupTaskbarIcon(win, icon, dataRoot)
     }
   })
 })

@@ -9,6 +9,7 @@ files:
   - package.json
 extraResources:
   - build/list-icons/**
+  - build/tray.ico
 asarUnpack:
   - '**/*.node'
 win:
