@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { api } from '@/lib/api'
 
 export const SIDEBAR_WIDTH = { min: 180, max: 420, default: 240 }
-export const DETAIL_WIDTH = { min: 300, max: 640, default: 384 }
+export const DETAIL_WIDTH = { min: 420, max: 800, default: 560 }
 
 interface LayoutState {
   sidebarWidth: number

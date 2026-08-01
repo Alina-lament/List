@@ -25,20 +25,24 @@ interface JournalState {
   clearError(): void
 }
 
+function toLocalKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toLocalKey(new Date())
 }
 
 function prevDay(date: string): string {
   const d = new Date(date)
   d.setDate(d.getDate() - 1)
-  return d.toISOString().slice(0, 10)
+  return toLocalKey(d)
 }
 
 function nextDay(date: string): string {
   const d = new Date(date)
   d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+  return toLocalKey(d)
 }
 
 function monthRange(year: number, month: number): { start: string; end: string } {

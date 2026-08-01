@@ -4,19 +4,10 @@ import { CSS } from '@dnd-kit/utilities'
 import type { CalendarTaskInstance } from '@/types/calendar'
 import { RecurrenceIcon } from '@/features/tasks/components/TaskItem'
 
-// 优先级底色（轻量透明，保证文字可读）
-const PRIORITY_BG: Record<number, string> = {
-  0: 'rgba(241, 245, 249, 0.80)', // 无优先级：浅灰
-  1: 'rgba(34, 197, 94, 0.12)',   // 低
-  2: 'rgba(245, 158, 11, 0.16)',  // 中
-  3: 'rgba(244, 63, 94, 0.12)',   // 高
-}
-
-const PRIORITY_BG_COMPLETED: Record<number, string> = {
-  0: 'rgba(203, 213, 225, 0.25)',
-  1: 'rgba(34, 197, 94, 0.06)',
-  2: 'rgba(245, 158, 11, 0.08)',
-  3: 'rgba(244, 63, 94, 0.06)',
+function listTint(color: string, completed: boolean): string {
+  return completed
+    ? 'rgba(203, 213, 225, 0.40)'
+    : `color-mix(in srgb, ${color} 20%, white)`
 }
 
 interface Props {
@@ -38,9 +29,7 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onE
     ? `${isRangeStart ? 'rounded-r-none -mr-[7px]' : ''} ${isRangeEnd ? 'rounded-l-none -ml-[7px]' : ''} ${!isRangeStart && !isRangeEnd ? 'rounded-none -mx-[7px]' : ''}`
     : 'rounded-lg'
 
-  const bg = instance.is_completed
-    ? (PRIORITY_BG_COMPLETED[instance.priority] ?? PRIORITY_BG_COMPLETED[0])
-    : (PRIORITY_BG[instance.priority] ?? PRIORITY_BG[0])
+  const bg = listTint(instance.list_color, instance.is_completed)
 
   return (
     <div
@@ -51,7 +40,7 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onE
         borderLeftColor: !isRange || isRangeStart ? instance.list_color : 'transparent',
         backgroundColor: bg,
       }}
-      className={`group flex min-h-[22px] items-center gap-1.5 border-l-[3px] px-1.5 py-1 text-left text-xs shadow-xs transition-all duration-150 hover:shadow-card ${
+      className={`group flex min-h-[26px] items-center gap-1.5 border-l-[3px] px-2 py-1.5 text-left text-[13px] shadow-xs transition-all duration-150 hover:shadow-card ${
         isDragging ? 'opacity-30' : ''
       } ${rangeClasses}`}
     >
@@ -61,7 +50,7 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onE
         className="cursor-grab touch-none rounded p-0.5 text-ink-4 transition-colors hover:bg-canvas-2/70"
         aria-label="拖拽改期"
       >
-        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
           <circle cx="5" cy="3" r="1.5" />
           <circle cx="11" cy="3" r="1.5" />
           <circle cx="5" cy="8" r="1.5" />

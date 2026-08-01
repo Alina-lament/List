@@ -5,7 +5,7 @@ import type { DailyCompletion, DailyRoutine } from '@shared/types'
 import { isCurrentMonth, isToday } from '@/lib/date-utils'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 
-const MAX_VISIBLE = 4
+const MAX_VISIBLE = 5
 
 interface Props {
   date: string
@@ -43,7 +43,7 @@ export const CalendarCell = memo(function CalendarCell({
     <div
       ref={setNodeRef}
       onDoubleClick={() => onCreateAt(date)}
-      className={`relative flex min-h-[100px] flex-col border-b border-r border-canvas-3 transition-all duration-150 ${
+      className={`relative flex min-h-[120px] flex-col border-b border-r border-canvas-3 transition-all duration-150 ${
         isOver
           ? 'bg-royal-50 ring-2 ring-inset ring-royal'
           : inMonth

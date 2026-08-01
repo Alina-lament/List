@@ -28,24 +28,27 @@ const MiniCalendarTaskBlock = memo(function MiniCalendarTaskBlock({ instance }: 
   })
 
   const bg = instance.is_completed
-    ? 'rgba(203, 213, 225, 0.35)'
-    : (PRIORITY_BG[instance.priority] ?? PRIORITY_BG[0])
+    ? 'rgba(203, 213, 225, 0.40)'
+    : `color-mix(in srgb, ${instance.list_color} 22%, white)`
 
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`mb-1 cursor-grab truncate rounded px-1 py-0.5 text-[10px] leading-tight ${
+      className={`mb-1.5 cursor-grab truncate rounded-md px-1.5 py-1 text-[11px] leading-snug shadow-xs ${
         isDragging ? 'opacity-40' : ''
       } ${instance.is_completed ? 'text-ink-4 line-through' : 'text-ink'}`}
       style={{
         transform: CSS.Translate.toString(transform),
         backgroundColor: bg,
-        borderLeft: `2px solid ${instance.list_color}`,
+        borderLeft: `3px solid ${instance.list_color}`,
       }}
       title={instance.title}
     >
+      {instance.due_time && (
+        <span className="mr-1 text-[10px] opacity-70">{instance.due_time.slice(0, 5)}</span>
+      )}
       {instance.title}
     </div>
   )
@@ -67,13 +70,13 @@ const MiniCalendarCell = memo(function MiniCalendarCell({ date, year, month, ins
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-h-[72px] flex-col border-b border-r border-canvas-3 p-1 transition-all ${
+      className={`flex min-h-[100px] flex-col border-b border-r border-canvas-3 p-1.5 transition-all ${
         isOver ? 'bg-royal-50 ring-2 ring-inset ring-royal' : inMonth ? 'bg-white' : 'bg-canvas-2/50'
       }`}
     >
-      <div className="mb-0.5 flex justify-end">
+      <div className="mb-1 flex justify-end">
         <span
-          className={`flex h-5 w-5 items-center justify-center text-[10px] font-bold ${
+          className={`flex h-6 w-6 items-center justify-center text-xs font-bold ${
             today ? 'rounded-full bg-royal text-white' : inMonth ? 'text-ink' : 'text-ink-4'
           }`}
         >
@@ -81,11 +84,11 @@ const MiniCalendarCell = memo(function MiniCalendarCell({ date, year, month, ins
         </span>
       </div>
       <div className="min-h-0 flex-1">
-        {instances.slice(0, 3).map((instance) => (
+        {instances.slice(0, 4).map((instance) => (
           <MiniCalendarTaskBlock key={instance.instance_id} instance={instance} />
         ))}
-        {instances.length > 3 && (
-          <div className="px-1 text-[9px] text-ink-3">+{instances.length - 3}</div>
+        {instances.length > 4 && (
+          <div className="px-1 text-[10px] font-medium text-ink-3">+{instances.length - 4}</div>
         )}
       </div>
     </div>
@@ -132,20 +135,20 @@ export function MiniCalendar() {
   if (!mounted) return null
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto p-4">
+    <div className="flex h-full flex-col overflow-y-auto p-3">
       {/* Header */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
             onClick={() => shiftMonth(-1)}
             className="rounded-lg p-1 text-ink-3 transition-colors hover:bg-canvas-2"
             aria-label="上月"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span className="min-w-[100px] text-center text-sm font-semibold text-ink">
+          <span className="min-w-[110px] text-center text-base font-bold text-ink">
             {formatMonthTitle(year, month)}
           </span>
           <button
@@ -153,7 +156,7 @@ export function MiniCalendar() {
             className="rounded-lg p-1 text-ink-3 transition-colors hover:bg-canvas-2"
             aria-label="下月"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
@@ -161,7 +164,7 @@ export function MiniCalendar() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => goToday()}
-            className="rounded-lg px-2 py-1 text-[11px] font-medium text-ink-3 transition-colors hover:bg-canvas-2"
+            className="rounded-lg px-2.5 py-1 text-xs font-medium text-ink-3 transition-colors hover:bg-canvas-2"
           >
             今天
           </button>
@@ -173,7 +176,7 @@ export function MiniCalendar() {
                   setWeekCount(n)
                   void setCalendarWeekCount(n)
                 }}
-                className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-all ${
+                className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all ${
                   weekCount === n
                     ? 'bg-white text-ink shadow-xs ring-1 ring-ink/5'
                     : 'text-ink-3 hover:text-ink'
@@ -201,14 +204,14 @@ export function MiniCalendar() {
       {/* Weekday headers */}
       <div className="grid grid-cols-7 border-b border-canvas-3 bg-canvas-2">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="py-1.5 text-center text-[10px] font-semibold text-ink-2">
+          <div key={d} className="py-2 text-center text-[11px] font-semibold text-ink-2">
             {d}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${displayWeeks.length}, 1fr)` }}>
+      <div className="grid flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${displayWeeks.length}, minmax(100px, 1fr))` }}>
         {displayWeeks.map((weekDays) => (
           <div key={weekDays[0]} className="contents">
             {weekDays.map((date) => (

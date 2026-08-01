@@ -171,13 +171,14 @@ export default function App() {
             reminder_minutes: instance.reminder_minutes,
           })
         } else if (instance.is_range_instance && instance.range_start && instance.range_end) {
-          // 范围任务：整体平移
-          const delta = daysBetween(instance.date, date)
+          // 范围任务：以目标格为新开始日期，保持时长不变
+          const duration = daysBetween(instance.range_start, instance.range_end)
           const task = await api.getTaskById(instance.task_id)
+          const dueOffset = task?.due_date ? daysBetween(instance.range_start, task.due_date) : null
           await tasksStore.updateTask(instance.task_id, {
-            due_date: task?.due_date ? shiftDateKey(task.due_date, delta) : null,
-            start_date: shiftDateKey(instance.range_start, delta),
-            end_date: shiftDateKey(instance.range_end, delta),
+            start_date: date,
+            end_date: shiftDateKey(date, duration),
+            due_date: dueOffset !== null ? shiftDateKey(date, dueOffset) : (task?.due_date ?? null),
           })
         } else {
           await tasksStore.updateTaskDueDate(instance.task_id, date)
