@@ -45,6 +45,11 @@ export const IpcChannels = {
   bgGetImageDataUrl: 'bg:getImageDataUrl',
   bgClearImage: 'bg:clearImage',
 
+  // sounds
+  soundsGetFolder: 'sounds:getFolder',
+  soundsList: 'sounds:list',
+  soundsGetDataUrl: 'sounds:getDataUrl',
+
   // brand
   brandSetImage: 'brand:setImage',
   brandGetDataUrl: 'brand:getDataUrl',
@@ -56,6 +61,7 @@ export const IpcChannels = {
   dailyUpdate: 'daily:update',
   dailyDelete: 'daily:delete',
   dailyGetCompletions: 'daily:getCompletions',
+  dailyGetCompletionsByRange: 'daily:getCompletionsByRange',
   dailyIncrement: 'daily:increment',
   dailyDecrement: 'daily:decrement',
 

@@ -139,6 +139,9 @@ export interface DailyRoutine {
   priority: 0 | 1 | 2 | 3
   active: 0 | 1
   days_of_week: string // JSON array, e.g. "[1,2,3,4,5]" for weekdays; "[]" = every day
+  start_date: string | null
+  end_date: string | null
+  is_archived: 0 | 1
   sort_order: number
   created_at: string
   updated_at: string
@@ -179,6 +182,8 @@ export interface CreateDailyRoutineInput {
   list_id: string
   priority?: 0 | 1 | 2 | 3
   days_of_week?: string
+  start_date?: string | null
+  end_date?: string | null
   items?: { title: string; target_count: number }[]
 }
 
@@ -190,6 +195,9 @@ export interface UpdateDailyRoutineInput {
   priority?: 0 | 1 | 2 | 3
   active?: 0 | 1
   days_of_week?: string
+  start_date?: string | null
+  end_date?: string | null
+  is_archived?: 0 | 1
   items?: { title: string; target_count: number }[]
 }
 
@@ -248,4 +256,6 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   calendarWeekCount: '4',
   closeBehavior: 'ask',
   taskSortMode: 'free',
+  taskCompleteSoundEnabled: '1',
+  taskCompleteSoundVolume: '80',
 }

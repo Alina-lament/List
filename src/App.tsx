@@ -233,7 +233,7 @@ export default function App() {
       onDragCancel={() => setActiveDrag(null)}
     >
       <AppShell>
-        {view === 'list' ? (
+        {view === 'today' || view === 'list' ? (
           <TaskListView />
         ) : view === 'calendar' ? (
           <CalendarView />

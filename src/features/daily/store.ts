@@ -13,6 +13,9 @@ interface DailyState {
   createRoutine(input: CreateDailyRoutineInput): Promise<DailyRoutine>
   updateRoutine(id: string, patch: UpdateDailyRoutineInput): Promise<void>
   deleteRoutine(id: string): Promise<void>
+  archiveRoutine(id: string): Promise<void>
+  unarchiveRoutine(id: string): Promise<void>
+  loadCompletionsByRange(start: string, end: string): Promise<void>
   increment(routineId: string, itemId?: string | null): Promise<void>
   decrement(routineId: string, itemId?: string | null): Promise<void>
   clearError(): void
@@ -56,6 +59,35 @@ export const useDailyStore = create<DailyState>()((set, get) => ({
       routines: s.routines.filter((r) => r.id !== id),
       completions: s.completions.filter((c) => c.routine_id !== id),
     }))
+  },
+
+  async archiveRoutine(id) {
+    await api.updateDailyRoutine(id, { is_archived: 1 })
+    set((s) => ({
+      routines: s.routines.map((r) => (r.id === id ? { ...r, is_archived: 1 } : r)),
+    }))
+  },
+
+  async unarchiveRoutine(id) {
+    await api.updateDailyRoutine(id, { is_archived: 0 })
+    set((s) => ({
+      routines: s.routines.map((r) => (r.id === id ? { ...r, is_archived: 0 } : r)),
+    }))
+  },
+
+  async loadCompletionsByRange(start, end) {
+    try {
+      const completions = await api.getDailyCompletionsByRange(start, end)
+      set((s) => {
+        const map = new Map(s.completions.map((c) => [`${c.routine_id}-${c.item_id ?? ''}-${c.date}`, c]))
+        for (const c of completions) {
+          map.set(`${c.routine_id}-${c.item_id ?? ''}-${c.date}`, c)
+        }
+        return { completions: Array.from(map.values()) }
+      })
+    } catch (e) {
+      set({ error: `加载完成情况失败：${String(e)}` })
+    }
   },
 
   async increment(routineId, itemId) {

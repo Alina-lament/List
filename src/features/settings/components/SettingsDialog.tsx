@@ -127,6 +127,11 @@ function QuickTab() {
   const closeBehavior = useSettingsStore((s) => s.closeBehavior)
   const updateSetting = useSettingsStore((s) => s.updateColor)
   const updateCloseBehavior = useSettingsStore((s) => s.updateCloseBehavior)
+  const taskCompleteSoundEnabled = useSettingsStore((s) => s.taskCompleteSoundEnabled)
+  const taskCompleteSoundVolume = useSettingsStore((s) => s.taskCompleteSoundVolume)
+  const taskCompleteSoundUrl = useSettingsStore((s) => s.taskCompleteSoundUrl)
+  const setTaskCompleteSoundEnabled = useSettingsStore((s) => s.setTaskCompleteSoundEnabled)
+  const setTaskCompleteSoundVolume = useSettingsStore((s) => s.setTaskCompleteSoundVolume)
 
   const CLOSE_BEHAVIOR_OPTIONS: { value: CloseBehavior; label: string }[] = [
     { value: 'ask', label: '每次询问' },
@@ -162,6 +167,51 @@ function QuickTab() {
               </kbd>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="border-t border-canvas-3 pt-4">
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase">任务完成音效</h3>
+        <p className="mb-3 text-xs text-ink-4">勾选完成任务时播放提示音，音效文件位于数据文件夹 sounds 目录</p>
+        <div className="rounded-xl border border-canvas-3 bg-white px-4 py-3">
+          <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm text-ink transition-colors hover:text-ink-2">
+            <input
+              type="checkbox"
+              checked={taskCompleteSoundEnabled}
+              onChange={(e) => void setTaskCompleteSoundEnabled(e.target.checked)}
+              className="accent-royal"
+            />
+            启用完成音效
+          </label>
+          <div className={`${taskCompleteSoundEnabled ? '' : 'pointer-events-none opacity-50'}`}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-ink-3">音量</span>
+              <span className="text-sm font-semibold text-ink">{taskCompleteSoundVolume}%</span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={taskCompleteSoundVolume}
+              onChange={(e) => void setTaskCompleteSoundVolume(Number(e.target.value))}
+              className="w-full accent-royal"
+            />
+          </div>
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => {
+                if (!taskCompleteSoundUrl) return
+                const audio = new Audio(taskCompleteSoundUrl)
+                audio.volume = taskCompleteSoundVolume / 100
+                void audio.play()
+              }}
+              disabled={!taskCompleteSoundEnabled || !taskCompleteSoundUrl}
+              className="rounded-lg bg-canvas-2 px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:bg-canvas-3 hover:text-ink disabled:opacity-40"
+            >
+              ▶ 测试音效
+            </button>
+          </div>
         </div>
       </div>
 

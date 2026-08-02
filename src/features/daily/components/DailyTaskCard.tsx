@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react'
 import type { DailyCompletion, DailyRoutine } from '@shared/types'
+import { todayKey } from '@/lib/date-utils'
 
 interface Props {
   routine: DailyRoutine
@@ -63,10 +64,14 @@ export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions,
     return '周' + days.map((d: number) => names[d]).join('')
   }, [routine.days_of_week])
 
-  // 获取某个 item 的完成计数
+  const today = todayKey()
+
+  // 获取某个 item 在今天的完成计数
   function itemCount(itemId?: string | null) {
     return completions.find((c) =>
-      c.routine_id === routine.id && (itemId ? c.item_id === itemId : !c.item_id),
+      c.routine_id === routine.id &&
+      c.date === today &&
+      (itemId ? c.item_id === itemId : !c.item_id),
     )?.count ?? 0
   }
 

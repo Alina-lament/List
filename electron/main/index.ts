@@ -12,6 +12,7 @@ import { createTagRepository } from './db/repositories/tagRepo'
 import { createTaskRepository } from './db/repositories/taskRepo'
 import { createSettingsRepository } from './db/repositories/settingsRepo'
 import { registerIpcHandlers } from './ipc'
+import { ensureDefaultSounds } from './sounds'
 import { startReminderScheduler } from './reminders/scheduler'
 import {
   APP_USER_MODEL_ID,
@@ -130,6 +131,7 @@ app.whenReady().then(() => {
   ensureDir(join(dataRoot, 'backgrounds'))
   ensureDir(join(dataRoot, 'brand'))
   ensureDir(join(dataRoot, 'countdowns'))
+  ensureDefaultSounds(dataRoot)
 
   const dbPath = join(dataRoot, 'db', 'younglife.db')
   const db = initDatabase(dbPath)

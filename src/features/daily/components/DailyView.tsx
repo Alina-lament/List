@@ -1,19 +1,30 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import dayjs from 'dayjs'
 import type { DailyRoutine } from '@shared/types'
 import { Button } from '@/components/ui/Button'
 import { useDailyStore } from '../store'
 import { useTasksStore } from '@/features/tasks/store'
 import { DailyTaskCard } from './DailyTaskCard'
 import { DailyRoutineEditor } from './DailyRoutineEditor'
+import { DailyCalendar } from './DailyCalendar'
 import { todayKey } from '@/lib/date-utils'
 
 export function DailyView() {
-  const { routines, completions, loading, increment, decrement } = useDailyStore()
+  const { routines, completions, loading, increment, decrement, loadCompletionsByRange } = useDailyStore()
   const { lists, selectedListId } = useTasksStore()
   const [editing, setEditing] = useState<DailyRoutine | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
 
   const today = todayKey()
+
+  // 加载当前月份（及前后少量缓冲）的完成情况
+  useEffect(() => {
+    const first = dayjs(`${calMonth.y}-${String(calMonth.m).padStart(2, '0')}-01`)
+    const start = first.subtract(7, 'day').format('YYYY-MM-DD')
+    const end = first.endOf('month').add(7, 'day').format('YYYY-MM-DD')
+    void loadCompletionsByRange(start, end)
+  }, [calMonth.y, calMonth.m, loadCompletionsByRange])
 
   // 今天应显示的 routines（按选中清单过滤）
   const todaysRoutines = useMemo(() => {
@@ -36,12 +47,6 @@ export function DailyView() {
     }).length
     return { total, completed }
   }, [todaysRoutines, completions, today])
-
-  // 获取 routine 对应的清单名
-  const listNames = useMemo(() => {
-    const map = new Map(lists.map((l) => [l.id, l.name]))
-    return (listId: string) => map.get(listId) ?? ''
-  }, [lists])
 
   if (loading) {
     return (
@@ -75,6 +80,16 @@ export function DailyView() {
 
       {/* 内容区 */}
       <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="mb-6">
+          <DailyCalendar
+            routines={routines.filter((r) => !r.is_archived)}
+            completions={completions}
+            year={calMonth.y}
+            month={calMonth.m}
+            onChangeMonth={(y, m) => setCalMonth({ y, m })}
+          />
+        </div>
+
         {todaysRoutines.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-4 rounded-2xl bg-white p-4 shadow-xs ring-1 ring-ink/5">

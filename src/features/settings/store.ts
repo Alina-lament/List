@@ -37,6 +37,10 @@ export interface SettingsState {
   taskSortMode: 'free' | 'priority' | 'name'
   // 窗口行为
   closeBehavior: CloseBehavior
+  // 音效
+  taskCompleteSoundEnabled: boolean
+  taskCompleteSoundVolume: number
+  taskCompleteSoundUrl: string | null
   // 操作状态
   loading: boolean
   // 动作
@@ -52,6 +56,9 @@ export interface SettingsState {
   clearBrandImage(): Promise<void>
   setCalendarWeekCount(n: number): Promise<void>
   setTaskSortMode(mode: 'free' | 'priority' | 'name'): Promise<void>
+  setTaskCompleteSoundEnabled(enabled: boolean): Promise<void>
+  setTaskCompleteSoundVolume(volume: number): Promise<void>
+  loadTaskCompleteSound(): Promise<void>
   applyPreset(name: string): Promise<void>
   resetDefaults(): Promise<void>
 }
@@ -121,6 +128,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   calendarWeekCount: Number(getDefault('calendarWeekCount')) || 4,
   taskSortMode: (getDefault('taskSortMode') as 'free' | 'priority' | 'name') || 'free',
   closeBehavior: (getDefault('closeBehavior') as CloseBehavior) || 'ask',
+  taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
+  taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
+  taskCompleteSoundUrl: null,
   loading: false,
 
   async init() {
@@ -153,6 +163,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         calendarWeekCount: Number(map.calendarWeekCount) || 4,
         taskSortMode: (map.taskSortMode as 'free' | 'priority' | 'name') || 'free',
         closeBehavior: (map.closeBehavior as CloseBehavior) || 'ask',
+        taskCompleteSoundEnabled: (map.taskCompleteSoundEnabled ?? getDefault('taskCompleteSoundEnabled')) === '1',
+        taskCompleteSoundVolume: parseNum(map.taskCompleteSoundVolume, parseNum(getDefault('taskCompleteSoundVolume'), 80)),
+        taskCompleteSoundUrl: await api.getSoundDataUrl('complete'),
         bgImagePath: await api.getBgImagePath(),
         bgImageDataUrl: await api.getBgImageDataUrl(),
         loading: false,
@@ -229,6 +242,22 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ taskSortMode: mode })
   },
 
+  async setTaskCompleteSoundEnabled(enabled) {
+    await api.updateSetting('taskCompleteSoundEnabled', enabled ? '1' : '0')
+    set({ taskCompleteSoundEnabled: enabled })
+  },
+
+  async setTaskCompleteSoundVolume(volume) {
+    const v = Math.max(0, Math.min(100, volume))
+    await api.updateSetting('taskCompleteSoundVolume', String(v))
+    set({ taskCompleteSoundVolume: v })
+  },
+
+  async loadTaskCompleteSound() {
+    const url = await api.getSoundDataUrl('complete')
+    set({ taskCompleteSoundUrl: url })
+  },
+
   async applyPreset(name) {
     const preset = PRESETS[name]
     if (!preset) return
@@ -258,6 +287,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       prihigh: getDefault('prihigh'),
       primed: getDefault('primed'),
       prilow: getDefault('prilow'),
+      taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
+      taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
     })
   },
 }))

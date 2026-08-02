@@ -68,6 +68,11 @@ export interface Api {
   getBgImageDataUrl(): Promise<string | null>
   clearBgImage(): Promise<void>
 
+  // Sounds
+  getSoundsFolder(): Promise<string>
+  listSounds(): Promise<string[]>
+  getSoundDataUrl(fileName: string): Promise<string>
+
   // Brand
   setBrandImage(filePath: string): Promise<string>
   getBrandDataUrl(): Promise<string | null>
@@ -79,6 +84,7 @@ export interface Api {
   updateDailyRoutine(id: string, patch: UpdateDailyRoutineInput): Promise<DailyRoutine>
   deleteDailyRoutine(id: string): Promise<void>
   getDailyCompletions(date: string): Promise<DailyCompletion[]>
+  getDailyCompletionsByRange(start: string, end: string): Promise<DailyCompletion[]>
   incrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
   decrementDailyCompletion(routineId: string, date: string, itemId?: string | null): Promise<DailyCompletion>
 

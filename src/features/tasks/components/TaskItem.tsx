@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { List, Task } from '@shared/types'
@@ -54,6 +54,20 @@ interface TaskItemProps {
   list?: List
   /** 子任务样式 */
   isSubtask?: boolean
+  /** 是否处于行内标题编辑模式（由父级控制，如新建子任务时） */
+  inlineEditing?: boolean
+  /** 行内标题提交 */
+  onInlineCommit?: (id: string, title: string) => void
+  /** 子任务行内编辑时按回车，创建同级的下一个子任务 */
+  onInlineCreateNext?: (parentTaskId: string, currentTaskId: string) => void
+  /** 是否包含子任务（用于显示展开/收纳按钮） */
+  hasSubtasks?: boolean
+  /** 子任务是否展开 */
+  subtasksExpanded?: boolean
+  /** 子任务数量 */
+  subtaskCount?: number
+  /** 切换子任务展开/收纳 */
+  onToggleSubtasks?: () => void
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -68,11 +82,32 @@ export const TaskItem = memo(function TaskItem({
   variant = 'default',
   list,
   isSubtask = false,
+  inlineEditing = false,
+  onInlineCommit,
+  onInlineCreateNext,
+  hasSubtasks = false,
+  subtasksExpanded = true,
+  subtaskCount,
+  onToggleSubtasks,
 }: TaskItemProps) {
+  const [draftTitle, setDraftTitle] = useState(task.title)
+  const [selfEditing, setSelfEditing] = useState(false)
+  const editing = inlineEditing || selfEditing
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    setDraftTitle(task.title)
+  }, [task.title])
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [editing])
+
   const completed = Boolean(task.is_completed)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `task:${task.id}`,
-    disabled: !sortable || isSubtask || completed,
+    disabled: !sortable || isSubtask || completed || editing,
     data: { type: 'task', task },
   })
 
@@ -135,13 +170,48 @@ export const TaskItem = memo(function TaskItem({
       />
 
       <div className="min-w-0 flex-1 flex flex-col">
-        <span
-          className={`truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
-            completed ? 'text-ink-4 line-through' : 'text-ink'
-          }`}
-        >
-          {task.title}
-        </span>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onInlineCommit?.(task.id, draftTitle)
+                if (isSubtask && task.parent_task_id && onInlineCreateNext) {
+                  onInlineCreateNext(task.parent_task_id, task.id)
+                }
+                setSelfEditing(false)
+                e.currentTarget.blur()
+              }
+              if (e.key === 'Escape') {
+                setDraftTitle(task.title)
+                onInlineCommit?.(task.id, task.title)
+                setSelfEditing(false)
+                e.currentTarget.blur()
+              }
+            }}
+            onBlur={() => {
+              onInlineCommit?.(task.id, draftTitle)
+              setSelfEditing(false)
+            }}
+            placeholder={isSubtask ? '子任务标题' : '任务标题'}
+            className={`w-full rounded-md border border-royal/60 bg-white px-2 py-0.5 text-left outline-none focus:border-royal focus:ring-2 focus:ring-royal/20 ${isSubtask ? 'text-[13px]' : 'text-sm'}`}
+          />
+        ) : (
+          <span
+            onClick={(e) => {
+              e.stopPropagation()
+              setSelfEditing(true)
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            className={`truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
+              completed ? 'text-ink-4 line-through' : task.title ? 'text-ink' : 'italic text-ink-4'
+            }`}
+          >
+            {task.title || '（无标题）'}
+          </span>
+        )}
         {list && (
           <div className="flex items-center gap-1 mt-0.5 text-xs text-ink-3">
             <ListIcon list={list} size={12} />
@@ -150,8 +220,18 @@ export const TaskItem = memo(function TaskItem({
         )}
       </div>
 
+      {hasSubtasks && onToggleSubtasks && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleSubtasks() }}
+          className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-medium text-ink-3 transition-colors hover:bg-canvas-2"
+          title={subtasksExpanded ? '收起子任务' : '展开子任务'}
+        >
+          <span className={`inline-block transition-transform ${subtasksExpanded ? 'rotate-90' : ''}`}>▸</span>
+          {subtaskCount !== undefined && <span>{subtaskCount}</span>}
+        </button>
+      )}
       {task.is_recurring === 1 && <RecurrenceIcon />}
-      {tagNames.map((name) => (
+      {tagNames.map((
         <span key={name} className="rounded-lg bg-canvas-2 px-2 py-0.5 text-[10px] font-medium text-ink-2">
           {name}
         </span>

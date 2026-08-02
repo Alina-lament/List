@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { Task } from '@shared/types'
 import { useTasksStore } from '../store'
 import { PRIORITY_COLORS } from './TaskItem'
-import { parseDateKey, todayKey, pad2 } from '@/lib/date-utils'
+import { todayKey, pad2 } from '@/lib/date-utils'
 import dayjs from 'dayjs'
 
 const PRIORITY_OPTIONS = [
@@ -40,16 +40,16 @@ type SubPanel = 'priority' | 'date' | 'list' | 'subtask' | null
 export function TaskContextMenu({
   menu,
   onClose,
+  onAddSubtask,
 }: {
   menu: ContextMenuState
   onClose: () => void
+  onAddSubtask?: (task: Task) => void
 }) {
-  const { lists, updateTask, updateTaskDueDate, createTask, deleteTask } = useTasksStore()
+  const { lists, updateTask, updateTaskDueDate, deleteTask } = useTasksStore()
   const [subPanel, setSubPanel] = useState<SubPanel>(null)
   const [calMonth, setCalMonth] = useState(() => ({ y: dayjs().year(), m: dayjs().month() + 1 }))
-  const [subtaskTitle, setSubtaskTitle] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
-  const subtaskInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -88,25 +88,6 @@ export function TaskContextMenu({
   const task = menu.task
   const dueDate = task.due_date ?? ''
   const today = todayKey()
-
-  async function handleAddSubtask() {
-    const title = subtaskTitle.trim()
-    if (!title) return
-    await createTask({
-      list_id: task.list_id,
-      title,
-      parent_task_id: task.id,
-    })
-    setSubtaskTitle('')
-    onClose()
-  }
-
-  // Auto-focus subtask input when subpanel opens
-  useEffect(() => {
-    if (subPanel === 'subtask') {
-      setTimeout(() => subtaskInputRef.current?.focus(), 50)
-    }
-  }, [subPanel])
 
   return createPortal(
     <div
@@ -280,41 +261,18 @@ export function TaskContextMenu({
 
       {/* 添加子任务 */}
       <div className="relative border-t border-canvas-3">
-        {subPanel === 'subtask' ? (
-          <div className="flex items-center gap-1.5 px-2 py-1.5">
-            <input
-              ref={subtaskInputRef}
-              value={subtaskTitle}
-              onChange={(e) => setSubtaskTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') void handleAddSubtask()
-                if (e.key === 'Escape') { setSubPanel(null); setSubtaskTitle('') }
-              }}
-              placeholder="输入子任务名称…"
-              className="min-w-0 flex-1 rounded-md border border-canvas-3 bg-white px-2 py-1 text-[13px] text-ink-2 placeholder:text-ink-4 focus:border-royal focus:outline-none"
-            />
-            <button
-              onClick={() => void handleAddSubtask()}
-              disabled={!subtaskTitle.trim()}
-              className="shrink-0 rounded-md bg-royal px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-royal-dark disabled:opacity-40"
-            >
-              添加
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => {
-              setSubPanel('subtask')
-              setSubtaskTitle('')
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-3">
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span>添加子任务</span>
-          </button>
-        )}
+        <button
+          onClick={() => {
+            onAddSubtask?.(task)
+            onClose()
+          }}
+          className="flex w-full items-center gap-2 px-3 py-2 text-[13px] text-ink-2 transition-colors hover:bg-canvas-2"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-ink-3">
+            <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>添加子任务</span>
+        </button>
       </div>
 
       {/* 删除任务 */}

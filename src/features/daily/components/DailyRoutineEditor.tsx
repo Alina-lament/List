@@ -34,6 +34,9 @@ export function DailyRoutineEditor({ open, onClose, routine }: Props) {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
   const [frequency, setFrequency] = useState<'daily' | 'weekly'>('daily')
   const [items, setItems] = useState<{ title: string; target_count: number }[]>([])
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [isArchived, setIsArchived] = useState<0 | 1>(0)
 
   useEffect(() => {
     if (!open) return
@@ -42,6 +45,9 @@ export function DailyRoutineEditor({ open, onClose, routine }: Props) {
     setTargetCount(routine?.target_count ?? 1)
     setListId(routine?.list_id ?? lists[0]?.id ?? '')
     setPriority(routine?.priority ?? 0)
+    setStartDate(routine?.start_date ?? '')
+    setEndDate(routine?.end_date ?? '')
+    setIsArchived(routine?.is_archived ?? 0)
     if (routine) {
       const dw = JSON.parse(routine.days_of_week || '[]') as number[]
       setDaysOfWeek(dw)
@@ -63,26 +69,24 @@ export function DailyRoutineEditor({ open, onClose, routine }: Props) {
   async function handleSave() {
     if (!title.trim() || !listId) return
     const dw = frequency === 'daily' ? '[]' : JSON.stringify(daysOfWeek)
+    const base = {
+      title: title.trim(),
+      description,
+      target_count: items.length > 0 ? 1 : targetCount,
+      list_id: listId,
+      priority,
+      days_of_week: dw,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      items: items.length > 0 ? items : undefined,
+    } as const
     if (routine) {
       await updateRoutine(routine.id, {
-        title: title.trim(),
-        description,
-        target_count: items.length > 0 ? 1 : targetCount,
-        list_id: listId,
-        priority,
-        days_of_week: dw,
-        items: items.length > 0 ? items : undefined,
+        ...base,
+        is_archived: isArchived,
       })
     } else {
-      await createRoutine({
-        title: title.trim(),
-        description,
-        target_count: items.length > 0 ? 1 : targetCount,
-        list_id: listId,
-        priority,
-        days_of_week: dw,
-        items: items.length > 0 ? items : undefined,
-      })
+      await createRoutine(base)
     }
     onClose()
   }
@@ -183,6 +187,49 @@ export function DailyRoutineEditor({ open, onClose, routine }: Props) {
                   </button>
                 )
               })}
+            </div>
+          </Field>
+        )}
+
+        <Field label="时间段（可选）">
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                const v = e.target.value
+                setStartDate(v)
+                if (endDate && v && endDate < v) setEndDate(v)
+              }}
+              className="min-w-0 flex-1 rounded-xl border border-canvas-3 bg-canvas px-3 py-2 text-sm text-ink focus:border-royal focus:outline-none"
+            />
+            <span className="text-xs text-ink-3">—</span>
+            <input
+              type="date"
+              value={endDate}
+              min={startDate}
+              onChange={(e) => {
+                const v = e.target.value
+                setEndDate(v)
+                if (startDate && v && v < startDate) setStartDate(v)
+              }}
+              className="min-w-0 flex-1 rounded-xl border border-canvas-3 bg-canvas px-3 py-2 text-sm text-ink focus:border-royal focus:outline-none"
+            />
+          </div>
+        </Field>
+
+        {routine && (
+          <Field label="状态">
+            <div className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={isArchived === 1}
+                  onChange={(e) => setIsArchived(e.target.checked ? 1 : 0)}
+                  className="h-4 w-4 rounded border-canvas-3"
+                />
+                已归档
+              </label>
             </div>
           </Field>
         )}

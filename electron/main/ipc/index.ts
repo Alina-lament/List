@@ -9,6 +9,7 @@ import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { syncTaskbarIcon } from '../iconSync'
+import { getSoundDataUrl, getSoundsFolder, listSounds } from '../sounds'
 import { extname, join } from 'path'
 import { readdirSync, readFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 
@@ -145,6 +146,9 @@ export function registerIpcHandlers(repos: Repositories): void {
   ipcMain.handle(IpcChannels.dailyGetCompletions, (_e, date: string) =>
     daily.getCompletions(date),
   )
+  ipcMain.handle(IpcChannels.dailyGetCompletionsByRange, (_e, start: string, end: string) =>
+    daily.getCompletionsByRange(start, end),
+  )
   ipcMain.handle(IpcChannels.dailyIncrement, (_e, routineId: string, date: string, itemId?: string | null) =>
     daily.increment(routineId, date, itemId),
   )
@@ -271,6 +275,14 @@ export function registerIpcHandlers(repos: Repositories): void {
         unlinkSync(join(bgDir, f))
       }
     }
+  })
+
+  // ── Sounds ──
+  ipcMain.handle(IpcChannels.soundsGetFolder, () => getSoundsFolder(dataRoot))
+  ipcMain.handle(IpcChannels.soundsList, () => listSounds(dataRoot))
+  ipcMain.handle(IpcChannels.soundsGetDataUrl, (_e, fileName: string) => {
+    const url = getSoundDataUrl(dataRoot, fileName)
+    return url ?? ''
   })
 
   // ── Countdowns ──

@@ -191,6 +191,17 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_tasks_date_range ON tasks(start_date, end_date);
     `,
   },
+  {
+    version: 8,
+    sql: `
+      ALTER TABLE daily_routines ADD COLUMN start_date TEXT;
+      ALTER TABLE daily_routines ADD COLUMN end_date TEXT;
+      ALTER TABLE daily_routines ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0;
+
+      CREATE INDEX idx_daily_routines_dates ON daily_routines(start_date, end_date);
+      CREATE INDEX idx_daily_routines_archived ON daily_routines(is_archived);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {

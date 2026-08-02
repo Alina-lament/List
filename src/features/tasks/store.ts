@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
+import { useSettingsStore } from '@/features/settings/store'
+import { useCalendarStore } from '@/features/calendar/store'
 
-export type ViewMode = 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
+export type ViewMode = 'today' | 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
 
 interface TasksState {
   lists: List[]
@@ -54,6 +56,17 @@ function sortListTasks(tasks: Task[]): Task[] {
   )
 }
 
+/** 播放任务完成音效（若启用） */
+function playTaskCompleteSound(): void {
+  const { taskCompleteSoundEnabled, taskCompleteSoundVolume, taskCompleteSoundUrl } = useSettingsStore.getState()
+  if (!taskCompleteSoundEnabled || !taskCompleteSoundUrl) return
+  const audio = new Audio(taskCompleteSoundUrl)
+  audio.volume = taskCompleteSoundVolume / 100
+  void audio.play().catch(() => {
+    // 自动播放策略等导致失败时静默忽略
+  })
+}
+
 export const useTasksStore = create<TasksState>()((set, get) => ({
   lists: [],
   tags: [],
@@ -61,7 +74,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   tasksByList: {},
   selectedListId: null,
   selectedTaskId: null,
-  view: 'list',
+  view: 'today',
   loading: false,
   error: null,
   _reqId: 0,
@@ -102,8 +115,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   },
 
   setView(view) {
-    if (view === 'list') {
-      set({ view })
+    if (view === 'today' || view === 'list') {
+      // 今日/所有任务都需要加载全部清单数据
+      set({ view, selectedListId: null, selectedTaskId: null })
       void get().selectAllLists()
     } else {
       // 切换到非清单视图时立即取消清单选中高亮
@@ -276,6 +290,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         ),
       },
     }))
+    if (completed) {
+      playTaskCompleteSound()
+    }
     try {
       await api.setTaskCompleted(task.id, completed)
     } catch (e) {
@@ -290,6 +307,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         },
         error: `更新失败：${String(e)}`,
       }))
+    } finally {
+      // 同步刷新日历，确保完成状态实时反映
+      void useCalendarStore.getState().refreshIfLoaded()
     }
   },
 

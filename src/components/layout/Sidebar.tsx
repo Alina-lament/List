@@ -11,7 +11,7 @@ import { api } from '@/lib/api'
 
 const VIEW_TABS: { key: ViewMode; label: string; icon: React.ReactNode }[] = [
   {
-    key: 'list',
+    key: 'today',
     label: '今日',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -248,6 +248,19 @@ export function Sidebar() {
 
         {listsExpanded && (
           <div className="space-y-0.5">
+            <button
+              onClick={() => setView('list')}
+              className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-all duration-150 ${
+                view === 'list' && selectedListId === null
+                  ? 'bg-white font-medium text-ink shadow-card ring-1 ring-ink/5'
+                  : 'text-ink-2 hover:bg-white/60 hover:text-ink'
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+              </svg>
+              所有任务
+            </button>
             {lists.map((list) => {
               const selected = list.id === selectedListId
               const showPicker = iconPickerId === list.id

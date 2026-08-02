@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import type { CalendarTaskInstance } from '@/types/calendar'
-import type { DailyCompletion, DailyRoutine } from '@shared/types'
 import { isCurrentMonth, isToday } from '@/lib/date-utils'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 
@@ -12,8 +11,6 @@ interface Props {
   year: number
   month: number
   instances: CalendarTaskInstance[]
-  dailyEntries: { routine: DailyRoutine; item: { id: string; title: string; target_count: number } }[]
-  dailyCompletions: DailyCompletion[]
   onEditInstance: (instance: CalendarTaskInstance) => void
   onCreateAt: (date: string) => void
   onSelectWeek?: () => void
@@ -25,8 +22,6 @@ export const CalendarCell = memo(function CalendarCell({
   year,
   month,
   instances,
-  dailyEntries,
-  dailyCompletions,
   onEditInstance,
   onCreateAt,
   onSelectWeek,
@@ -92,32 +87,6 @@ export const CalendarCell = memo(function CalendarCell({
           )}
         </div>
 
-        {/* 每日任务 — 固定在底部，同水平线 */}
-        <div className="shrink-0 border-t border-canvas-3 pt-1" style={{ minHeight: dailyEntries.length > 0 ? undefined : 0 }}>
-          <div className="space-y-0.5">
-            {dailyEntries.map(({ routine: r, item }) => {
-              const comp = dailyCompletions.find(
-                (c) => c.routine_id === r.id && c.date === date && (r.items.length > 0 ? c.item_id === item.id : !c.item_id),
-              )
-              const c = comp?.count ?? 0
-              const done = c >= item.target_count
-              return (
-                <div
-                  key={`${r.id}-${item.id}`}
-                  className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-[9px] ${
-                    done ? 'bg-emerald-50 text-emerald-700' : c > 0 ? 'bg-amber-50 text-amber-700' : 'bg-canvas-2 text-ink-3'
-                  }`}
-                  title={`${r.title} › ${item.title}: ${c}/${item.target_count}`}
-                >
-                  <span className={`h-1.5 w-1.5 shrink-0 rounded-sm ${
-                    done ? 'bg-emerald-400' : c > 0 ? 'bg-amber-300' : 'bg-canvas-3'
-                  }`} />
-                  <span className="truncate">{item.title}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ export interface DailyRepository {
   update(id: string, patch: UpdateDailyRoutineInput): DailyRoutine
   remove(id: string): void
   getCompletions(date: string): DailyCompletion[]
+  getCompletionsByRange(start: string, end: string): DailyCompletion[]
   increment(routineId: string, date: string, itemId?: string | null): DailyCompletion
   decrement(routineId: string, date: string, itemId?: string | null): DailyCompletion
 }
@@ -34,9 +35,9 @@ export function createDailyRepository(db: AppDatabase): DailyRepository {
       const id = randomUUID()
       const txn = db.transaction(() => {
         db.prepare(
-          `INSERT INTO daily_routines (id, title, description, target_count, list_id, priority, days_of_week, sort_order, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM daily_routines), ?, ?)`,
-        ).run(id, input.title, input.description ?? '', input.target_count ?? 1, input.list_id, input.priority ?? 0, input.days_of_week ?? '[]', now, now)
+          `INSERT INTO daily_routines (id, title, description, target_count, list_id, priority, days_of_week, start_date, end_date, is_archived, sort_order, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM daily_routines), ?, ?)`,
+        ).run(id, input.title, input.description ?? '', input.target_count ?? 1, input.list_id, input.priority ?? 0, input.days_of_week ?? '[]', input.start_date ?? null, input.end_date ?? null, 0, now, now)
 
         // 创建子项
         if (input.items && input.items.length > 0) {
@@ -58,7 +59,7 @@ export function createDailyRepository(db: AppDatabase): DailyRepository {
     update(id, patch) {
       const sets: string[] = []
       const values: unknown[] = []
-      const allowed: (keyof UpdateDailyRoutineInput)[] = ['title', 'description', 'target_count', 'list_id', 'priority', 'active', 'days_of_week']
+      const allowed: (keyof UpdateDailyRoutineInput)[] = ['title', 'description', 'target_count', 'list_id', 'priority', 'active', 'days_of_week', 'start_date', 'end_date', 'is_archived']
       for (const key of allowed) {
         if (patch[key] !== undefined) {
           sets.push(`${key} = ?`)
@@ -97,6 +98,12 @@ export function createDailyRepository(db: AppDatabase): DailyRepository {
 
     getCompletions(date) {
       return db.prepare('SELECT * FROM daily_completions WHERE date = ?').all(date) as DailyCompletion[]
+    },
+
+    getCompletionsByRange(start, end) {
+      return db
+        .prepare('SELECT * FROM daily_completions WHERE date >= ? AND date <= ?')
+        .all(start, end) as DailyCompletion[]
     },
 
     increment(routineId, date, itemId) {

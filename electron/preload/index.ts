@@ -58,6 +58,11 @@ const api: Api = {
   getBgImageDataUrl: () => ipcRenderer.invoke(IpcChannels.bgGetImageDataUrl),
   clearBgImage: () => ipcRenderer.invoke(IpcChannels.bgClearImage),
 
+  // Sounds
+  getSoundsFolder: () => ipcRenderer.invoke(IpcChannels.soundsGetFolder),
+  listSounds: () => ipcRenderer.invoke(IpcChannels.soundsList),
+  getSoundDataUrl: (fileName) => ipcRenderer.invoke(IpcChannels.soundsGetDataUrl, fileName),
+
   // Brand
   setBrandImage: (filePath) => ipcRenderer.invoke(IpcChannels.brandSetImage, filePath),
   getBrandDataUrl: () => ipcRenderer.invoke(IpcChannels.brandGetDataUrl),
@@ -71,6 +76,7 @@ const api: Api = {
     ipcRenderer.invoke(IpcChannels.dailyUpdate, id, patch),
   deleteDailyRoutine: (id) => ipcRenderer.invoke(IpcChannels.dailyDelete, id),
   getDailyCompletions: (date) => ipcRenderer.invoke(IpcChannels.dailyGetCompletions, date),
+  getDailyCompletionsByRange: (start, end) => ipcRenderer.invoke(IpcChannels.dailyGetCompletionsByRange, start, end),
   incrementDailyCompletion: (routineId, date, itemId) =>
     ipcRenderer.invoke(IpcChannels.dailyIncrement, routineId, date, itemId),
   decrementDailyCompletion: (routineId, date, itemId) =>
