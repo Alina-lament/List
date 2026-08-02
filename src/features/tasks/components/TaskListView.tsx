@@ -45,7 +45,6 @@ export function TaskListView() {
   const [inlineEditTaskId, setInlineEditTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const [dailyExpanded, setDailyExpanded] = useState(true)
-  const [collapsedSubtasks, setCollapsedSubtasks] = useState<Set<string>>(new Set())
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -243,40 +242,12 @@ export function TaskListView() {
   /** 渲染一条任务及其子任务 */
   function renderTaskWithSubtasks(task: Task, extra?: { variant?: 'default' | 'overdue'; sortable?: boolean }) {
     const subtasks = subtasksByParent[task.id] ?? []
-    const hasSubtasks = subtasks.length > 0
-    const expanded = !collapsedSubtasks.has(task.id)
-    const activeSubtasks = subtasks.filter((t) => !t.is_completed)
-    const completedSubtasks = subtasks.filter((t) => t.is_completed)
     return (
       <div key={task.id}>
-        <TaskItem
-          key={task.id}
-          {...taskItemProps(task, extra)}
-          hasSubtasks={hasSubtasks}
-          subtasksExpanded={expanded}
-          subtaskCount={subtasks.length}
-          onToggleSubtasks={hasSubtasks ? () => {
-            setCollapsedSubtasks((prev) => {
-              const next = new Set(prev)
-              if (next.has(task.id)) next.delete(task.id)
-              else next.add(task.id)
-              return next
-            })
-          } : undefined}
-        />
-        {hasSubtasks && expanded && (
+        <TaskItem key={task.id} {...taskItemProps(task, extra)} />
+        {subtasks.length > 0 && (
           <div className="mt-1 space-y-1">
-            {activeSubtasks.map((sub) => (
-              <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} />
-            ))}
-            {activeSubtasks.length > 0 && completedSubtasks.length > 0 && (
-              <div className="flex items-center gap-2 py-1">
-                <div className="h-px flex-1 bg-canvas-3/60" />
-                <span className="text-[10px] font-medium text-ink-4">已完成</span>
-                <div className="h-px flex-1 bg-canvas-3/60" />
-              </div>
-            )}
-            {completedSubtasks.map((sub) => (
+            {subtasks.map((sub) => (
               <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} />
             ))}
           </div>

@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
 import { useSettingsStore } from '@/features/settings/store'
-import { useCalendarStore } from '@/features/calendar/store'
 
 export type ViewMode = 'today' | 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
 
@@ -307,9 +306,6 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         },
         error: `更新失败：${String(e)}`,
       }))
-    } finally {
-      // 同步刷新日历，确保完成状态实时反映
-      void useCalendarStore.getState().refreshIfLoaded()
     }
   },
 

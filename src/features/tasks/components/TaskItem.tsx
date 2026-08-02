@@ -60,14 +60,6 @@ interface TaskItemProps {
   onInlineCommit?: (id: string, title: string) => void
   /** 子任务行内编辑时按回车，创建同级的下一个子任务 */
   onInlineCreateNext?: (parentTaskId: string, currentTaskId: string) => void
-  /** 是否包含子任务（用于显示展开/收纳按钮） */
-  hasSubtasks?: boolean
-  /** 子任务是否展开 */
-  subtasksExpanded?: boolean
-  /** 子任务数量 */
-  subtaskCount?: number
-  /** 切换子任务展开/收纳 */
-  onToggleSubtasks?: () => void
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -85,10 +77,6 @@ export const TaskItem = memo(function TaskItem({
   inlineEditing = false,
   onInlineCommit,
   onInlineCreateNext,
-  hasSubtasks = false,
-  subtasksExpanded = true,
-  subtaskCount,
-  onToggleSubtasks,
 }: TaskItemProps) {
   const [draftTitle, setDraftTitle] = useState(task.title)
   const [selfEditing, setSelfEditing] = useState(false)
@@ -220,18 +208,8 @@ export const TaskItem = memo(function TaskItem({
         )}
       </div>
 
-      {hasSubtasks && onToggleSubtasks && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleSubtasks() }}
-          className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[11px] font-medium text-ink-3 transition-colors hover:bg-canvas-2"
-          title={subtasksExpanded ? '收起子任务' : '展开子任务'}
-        >
-          <span className={`inline-block transition-transform ${subtasksExpanded ? 'rotate-90' : ''}`}>▸</span>
-          {subtaskCount !== undefined && <span>{subtaskCount}</span>}
-        </button>
-      )}
       {task.is_recurring === 1 && <RecurrenceIcon />}
-      {tagNames.map((
+      {tagNames.map((name) => (
         <span key={name} className="rounded-lg bg-canvas-2 px-2 py-0.5 text-[10px] font-medium text-ink-2">
           {name}
         </span>

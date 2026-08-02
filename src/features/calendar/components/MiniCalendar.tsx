@@ -117,10 +117,9 @@ export function MiniCalendar() {
   const weeks = useMemo(() => gridToWeeks(grid), [grid])
 
   const filteredInstancesByDate = useMemo(() => {
-    if (!selectedListId) return instancesByDate
     const filtered: Record<string, CalendarTaskInstance[]> = {}
     for (const [date, arr] of Object.entries(instancesByDate)) {
-      filtered[date] = arr.filter((i) => i.list_id === selectedListId)
+      filtered[date] = arr.filter((i) => (!selectedListId || i.list_id === selectedListId) && !i.is_completed)
     }
     return filtered
   }, [instancesByDate, selectedListId])
