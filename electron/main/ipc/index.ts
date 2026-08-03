@@ -10,6 +10,7 @@ import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
 import { syncTaskbarIcon } from '../iconSync'
 import { getSoundDataUrl, getSoundsFolder, listSounds } from '../sounds'
+import type { BackupService } from '../backup'
 import { extname, join } from 'path'
 import { readdirSync, readFileSync, copyFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 
@@ -22,6 +23,7 @@ export interface Repositories {
   journal: JournalRepository
   countdowns: CountdownRepository
   dataRoot: string
+  backupService: BackupService
 }
 
 function ensureDir(dir: string): void {
@@ -29,7 +31,7 @@ function ensureDir(dir: string): void {
 }
 
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings, daily, journal, countdowns, dataRoot } = repos
+  const { tasks, lists, tags, settings, daily, journal, countdowns, dataRoot, backupService } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -90,12 +92,25 @@ export function registerIpcHandlers(repos: Repositories): void {
     const destName = `${listId}${ext}`
     const dest = join(listIconsDir, destName)
     // 移除该清单旧的自定义图标（避免同名残留）
+    const oldFiles: string[] = []
     if (existsSync(listIconsDir)) {
       for (const f of readdirSync(listIconsDir)) {
-        if (f.startsWith(`${listId}.`)) unlinkSync(join(listIconsDir, f))
+        if (f.startsWith(`${listId}.`)) {
+          unlinkSync(join(listIconsDir, f))
+          oldFiles.push(`icons/lists/${f}`)
+        }
       }
     }
     copyFileSync(filePath, dest)
+
+    // 同步到备份
+    Promise.resolve().then(async () => {
+      for (const rel of oldFiles) await backupService.removeFile(rel).catch(() => {})
+      await backupService.syncFile(`icons/lists/${destName}`).catch((err) => {
+        console.error('[backup] listsSetIcon sync failed:', err)
+      })
+    })
+
     return dest
   })
 
@@ -133,6 +148,24 @@ export function registerIpcHandlers(repos: Repositories): void {
   ipcMain.handle(IpcChannels.settingsUpdate, (_e, key: string, value: string) =>
     settings.set(key, value),
   )
+
+  // ── Backup ──
+  ipcMain.handle(IpcChannels.backupSelectFolder, async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: '选择数据备份位置',
+    })
+    return result.canceled ? null : result.filePaths[0]
+  })
+  ipcMain.handle(IpcChannels.backupGetStatus, () => backupService.getStatus())
+  ipcMain.handle(IpcChannels.backupSetPath, async (_e, path: string) => {
+    await backupService.setPath(path)
+    return backupService.getStatus()
+  })
+  ipcMain.handle(IpcChannels.backupClearPath, async () => {
+    await backupService.setPath(null)
+    return backupService.getStatus()
+  })
 
   // ── Daily routines ──
   ipcMain.handle(IpcChannels.dailyGetAll, () => daily.getAll())
@@ -203,9 +236,16 @@ export function registerIpcHandlers(repos: Repositories): void {
     // 任务栏图标需要额外处理：转换为 ICO、同步快捷方式、
     // 并通过 setAppDetails 设置 RelaunchIconResource。
     // 该过程包含 Explorer 刷新等待，放在后台执行，不阻塞前端保存设置。
-    syncTaskbarIcon(win, iconPath, dataRoot).catch((err) => {
-      console.error('[ipc] 同步任务栏图标失败:', err)
-    })
+    syncTaskbarIcon(win, iconPath, dataRoot)
+      .then(() => {
+        // 同步生成的任务栏图标到备份
+        void backupService.syncDir('icons').catch((err) => {
+          console.error('[backup] iconsSetApp sync failed:', err)
+        })
+      })
+      .catch((err) => {
+        console.error('[ipc] 同步任务栏图标失败:', err)
+      })
   })
 
   ipcMain.handle(IpcChannels.iconsGetDataUrl, (_e, fileName: string) => {
@@ -224,6 +264,9 @@ export function registerIpcHandlers(repos: Repositories): void {
     const ext = filePath.split('.').pop() ?? 'png'
     const dest = join(brandDir, `logo.${ext}`)
     copyFileSync(filePath, dest)
+    void backupService.syncDir('brand').catch((err) => {
+      console.error('[backup] brandSetImage sync failed:', err)
+    })
     return dest
   })
   ipcMain.handle(IpcChannels.brandGetDataUrl, () => {
@@ -239,7 +282,10 @@ export function registerIpcHandlers(repos: Repositories): void {
   ipcMain.handle(IpcChannels.brandClearImage, () => {
     if (existsSync(brandDir)) {
       const files = readdirSync(brandDir).filter((f) => /^logo\./.test(f))
-      for (const f of files) unlinkSync(join(brandDir, f))
+      for (const f of files) {
+        unlinkSync(join(brandDir, f))
+        void backupService.removeFile(`brand/${f}`).catch(() => {})
+      }
     }
   })
 
@@ -250,6 +296,9 @@ export function registerIpcHandlers(repos: Repositories): void {
     const ext = filePath.split('.').pop() ?? 'jpg'
     const dest = join(bgDir, `bg.${ext}`)
     copyFileSync(filePath, dest)
+    void backupService.syncDir('backgrounds').catch((err) => {
+      console.error('[backup] bgSetImage sync failed:', err)
+    })
     return dest
   })
   ipcMain.handle(IpcChannels.bgGetImagePath, () => {
@@ -273,6 +322,7 @@ export function registerIpcHandlers(repos: Repositories): void {
       for (const f of files) {
         const { unlinkSync } = require('fs')
         unlinkSync(join(bgDir, f))
+        void backupService.removeFile(`backgrounds/${f}`).catch(() => {})
       }
     }
   })
@@ -302,13 +352,28 @@ export function registerIpcHandlers(repos: Repositories): void {
     const ext = extname(filePath).toLowerCase() || '.jpg'
     const dest = join(countdownBgDir, `${id}${ext}`)
     // 移除旧背景图
+    const oldFiles: string[] = []
     if (existsSync(countdownBgDir)) {
       for (const f of readdirSync(countdownBgDir)) {
-        if (f.startsWith(`${id}.`)) unlinkSync(join(countdownBgDir, f))
+        if (f.startsWith(`${id}.`)) {
+          unlinkSync(join(countdownBgDir, f))
+          oldFiles.push(`countdowns/${f}`)
+        }
       }
     }
     copyFileSync(filePath, dest)
-    return countdowns.update(id, { bg_image_path: dest }) as Countdown
+
+    const result = countdowns.update(id, { bg_image_path: dest }) as Countdown
+
+    // 同步到备份
+    Promise.resolve().then(async () => {
+      for (const rel of oldFiles) await backupService.removeFile(rel).catch(() => {})
+      await backupService.syncFile(`countdowns/${id}${ext}`).catch((err) => {
+        console.error('[backup] countdownSetBg sync failed:', err)
+      })
+    })
+
+    return result
   })
   ipcMain.handle(IpcChannels.countdownGetBgDataUrl, (_e, id: string) => {
     const all = countdowns.getAll()

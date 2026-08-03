@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api } from '@/lib/api'
 import { DEFAULT_SETTINGS, type CloseBehavior } from '@shared/types'
+import type { BackupStatus } from '@shared/api'
 
 export interface SettingsState {
   // 颜色
@@ -41,6 +42,9 @@ export interface SettingsState {
   taskCompleteSoundEnabled: boolean
   taskCompleteSoundVolume: number
   taskCompleteSoundUrl: string | null
+  // 备份
+  backupPath: string | null
+  backupStatus: BackupStatus | null
   // 操作状态
   loading: boolean
   // 动作
@@ -59,6 +63,9 @@ export interface SettingsState {
   setTaskCompleteSoundEnabled(enabled: boolean): Promise<void>
   setTaskCompleteSoundVolume(volume: number): Promise<void>
   loadTaskCompleteSound(): Promise<void>
+  selectBackupFolder(): Promise<void>
+  clearBackupPath(): Promise<void>
+  loadBackupStatus(): Promise<void>
   applyPreset(name: string): Promise<void>
   resetDefaults(): Promise<void>
 }
@@ -131,6 +138,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
   taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
   taskCompleteSoundUrl: null,
+  backupPath: null,
+  backupStatus: null,
   loading: false,
 
   async init() {
@@ -168,6 +177,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         taskCompleteSoundUrl: await api.getSoundDataUrl('complete'),
         bgImagePath: await api.getBgImagePath(),
         bgImageDataUrl: await api.getBgImageDataUrl(),
+        backupPath: map.backupPath || null,
+        backupStatus: await api.getBackupStatus(),
         loading: false,
       })
       // 窗口图标由主进程在 BrowserWindow 构造时设置，此处不重复调用
@@ -256,6 +267,25 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   async loadTaskCompleteSound() {
     const url = await api.getSoundDataUrl('complete')
     set({ taskCompleteSoundUrl: url })
+  },
+
+  async selectBackupFolder() {
+    const path = await api.selectBackupFolder()
+    if (!path) return
+    await api.updateSetting('backupPath', path)
+    const status = await api.setBackupPath(path)
+    set({ backupPath: path, backupStatus: status })
+  },
+
+  async clearBackupPath() {
+    await api.updateSetting('backupPath', '')
+    const status = await api.clearBackupPath()
+    set({ backupPath: null, backupStatus: status })
+  },
+
+  async loadBackupStatus() {
+    const status = await api.getBackupStatus()
+    set({ backupStatus: status })
   },
 
   async applyPreset(name) {

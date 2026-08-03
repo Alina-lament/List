@@ -42,6 +42,12 @@ const api: Api = {
   getAllSettings: () => ipcRenderer.invoke(IpcChannels.settingsGetAll),
   updateSetting: (key, value) => ipcRenderer.invoke(IpcChannels.settingsUpdate, key, value),
 
+  // Backup
+  selectBackupFolder: () => ipcRenderer.invoke(IpcChannels.backupSelectFolder),
+  getBackupStatus: () => ipcRenderer.invoke(IpcChannels.backupGetStatus),
+  setBackupPath: (path: string) => ipcRenderer.invoke(IpcChannels.backupSetPath, path),
+  clearBackupPath: () => ipcRenderer.invoke(IpcChannels.backupClearPath),
+
   // File dialogs
   openImageFileDialog: () => ipcRenderer.invoke(IpcChannels.dialogOpenImageFile),
 

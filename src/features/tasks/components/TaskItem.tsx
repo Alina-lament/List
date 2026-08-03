@@ -60,6 +60,12 @@ interface TaskItemProps {
   onInlineCommit?: (id: string, title: string) => void
   /** 子任务行内编辑时按回车，创建同级的下一个子任务 */
   onInlineCreateNext?: (parentTaskId: string, currentTaskId: string) => void
+  /** 是否含有子任务（用于显示折叠按钮） */
+  hasSubtasks?: boolean
+  /** 子任务是否展开 */
+  subtasksExpanded?: boolean
+  /** 切换子任务展开/折叠 */
+  onToggleSubtasks?: () => void
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -77,6 +83,9 @@ export const TaskItem = memo(function TaskItem({
   inlineEditing = false,
   onInlineCommit,
   onInlineCreateNext,
+  hasSubtasks = false,
+  subtasksExpanded = true,
+  onToggleSubtasks,
 }: TaskItemProps) {
   const [draftTitle, setDraftTitle] = useState(task.title)
   const [selfEditing, setSelfEditing] = useState(false)
@@ -123,6 +132,27 @@ export const TaskItem = memo(function TaskItem({
               : 'border-transparent bg-white hover:border-canvas-3 hover:shadow-card'
       } ${isDragging ? 'opacity-40 shadow-lg' : ''}`}
     >
+      {/* 子任务折叠/展开按钮（最左侧） */}
+      {hasSubtasks && onToggleSubtasks ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleSubtasks()
+          }}
+          className="shrink-0 -ml-1.5 rounded p-0.5 text-ink-3 transition-colors hover:bg-canvas-2 hover:text-ink"
+          aria-label={subtasksExpanded ? '折叠子任务' : '展开子任务'}
+          title={subtasksExpanded ? '折叠子任务' : '展开子任务'}
+        >
+          <span className={`inline-block transition-transform ${subtasksExpanded ? 'rotate-90' : ''}`}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+          </span>
+        </button>
+      ) : (
+        <span className="w-3 shrink-0" aria-hidden="true" />
+      )}
+
       {/* 左侧优先级颜色条 */}
       <div
         className="w-1 self-stretch rounded-full"

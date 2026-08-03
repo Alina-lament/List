@@ -14,6 +14,63 @@ import { DailyTaskCard } from '@/features/daily/components/DailyTaskCard'
 import { useSettingsStore } from '@/features/settings/store'
 import { MiniCalendar } from '@/features/calendar/components/MiniCalendar'
 import dayjs from 'dayjs'
+import type { DailyCompletion, DailyRoutine } from '@shared/types'
+
+interface DailyRoutinesSectionProps {
+  dailyRoutines: DailyRoutine[]
+  dailyCompletions: DailyCompletion[]
+  dailyExpanded: boolean
+  setDailyExpanded: (v: boolean | ((prev: boolean) => boolean)) => void
+  dailyIncrement: (routineId: string, date: string, itemId?: string | null) => Promise<DailyCompletion>
+  dailyDecrement: (routineId: string, date: string, itemId?: string | null) => Promise<DailyCompletion>
+}
+
+function DailyRoutinesSection({
+  dailyRoutines,
+  dailyCompletions,
+  dailyExpanded,
+  setDailyExpanded,
+  dailyIncrement,
+  dailyDecrement,
+}: DailyRoutinesSectionProps) {
+  const todayDow = new Date().getDay()
+  const todaysDaily = dailyRoutines.filter((r) => {
+    if (!r.active) return false
+    const days = JSON.parse(r.days_of_week || '[]') as number[]
+    if (days.length === 0) return true
+    return days.includes(todayDow)
+  })
+  if (todaysDaily.length === 0) return null
+  return (
+    <div className="relative mt-6 pt-4">
+      <div className="absolute inset-x-0 top-0 h-px bg-canvas-3/40" />
+      <button
+        className="mb-3 flex w-full items-center justify-between text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors hover:text-ink"
+        onClick={() => setDailyExpanded((v) => !v)}
+      >
+        <span className="flex items-center gap-1.5">
+          <span className={`inline-block transition-transform ${dailyExpanded ? 'rotate-90' : ''}`}>▸</span>
+          每日打卡
+        </span>
+        <span className="text-[10px] font-normal normal-case">{todaysDaily.length}</span>
+      </button>
+      {dailyExpanded && (
+        <div className="space-y-2">
+          {todaysDaily.map((routine) => (
+            <DailyTaskCard
+              key={routine.id}
+              routine={routine}
+              completions={dailyCompletions}
+              onCheck={(id, itemId) => void dailyIncrement(id, todayKey(), itemId)}
+              onUncheck={(id, itemId) => void dailyDecrement(id, todayKey(), itemId)}
+              onEdit={() => {}}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function TaskListView() {
   const {
@@ -48,6 +105,8 @@ export function TaskListView() {
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [collapsedCompletedSubtasks, setCollapsedCompletedSubtasks] = useState<Set<string>>(new Set())
+  const [collapsedParentTasks, setCollapsedParentTasks] = useState<Set<string>>(new Set())
   const { detailWidth, setDetailWidth, saveDetailWidth, showDetailCalendar } = useLayoutStore()
   const {
     routines: dailyRoutines,
@@ -89,19 +148,10 @@ export function TaskListView() {
   const active = useMemo(() => tasks.filter((t) => !t.is_completed), [tasks])
   const completed = useMemo(() => tasks.filter((t) => t.is_completed), [tasks])
 
-  // 子任务按父任务分组（包含已完成子任务，避免折叠后显示不全）
-  const subtasksByParent = useMemo(() => {
-    const map: Record<string, Task[]> = {}
-    for (const t of tasks) {
-      if (t.parent_task_id) {
-        (map[t.parent_task_id] ??= []).push(t)
-      }
-    }
-    return map
-  }, [tasks])
+  // 今日日期，用于「今日」视图筛选
+  const today = todayKey()
 
   // 将活跃任务分组：今日 → 将来/无日期 → 过期（排除子任务，子任务在父任务下方显示）
-  const today = todayKey()
   const { todayActive, upcomingActive, overdueActive } = useMemo(() => {
     const todayList: Task[] = []
     const upcoming: Task[] = []
@@ -117,7 +167,23 @@ export function TaskListView() {
       }
     }
     return { todayActive: todayList, upcomingActive: upcoming, overdueActive: overdue }
-  }, [active])
+  }, [active, today])
+
+  const todayCompleted = useMemo(
+    () => completed.filter((t) => t.due_date === today && !t.parent_task_id),
+    [completed, today],
+  )
+
+  // 子任务按父任务分组（包含已完成子任务，避免折叠后显示不全）
+  const subtasksByParent = useMemo(() => {
+    const map: Record<string, Task[]> = {}
+    for (const t of tasks) {
+      if (t.parent_task_id) {
+        (map[t.parent_task_id] ??= []).push(t)
+      }
+    }
+    return map
+  }, [tasks])
 
   const tagNamesByTask = useMemo(() => {
     const byId = new Map(tags.map((t) => [t.id, t.name]))
@@ -218,6 +284,7 @@ export function TaskListView() {
 
   // 传递给 TaskItem 的通用 props 工厂
   function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean; sortable?: boolean }) {
+    const hasSubtasks = !extra?.isSubtask && (subtasksByParent[task.id]?.length ?? 0) > 0
     return {
       task,
       tagNames: tagNamesByTask[task.id] ?? [],
@@ -236,20 +303,72 @@ export function TaskListView() {
       inlineEditing: task.id === inlineEditTaskId,
       onInlineCommit: handleInlineCommit,
       onInlineCreateNext: extra?.isSubtask ? handleCreateNextSubtask : undefined,
+      hasSubtasks,
+      subtasksExpanded: !collapsedParentTasks.has(task.id),
+      onToggleSubtasks: hasSubtasks ? () => toggleParentTask(task.id) : undefined,
     }
+  }
+
+  function toggleCompletedSubtasks(parentTaskId: string) {
+    setCollapsedCompletedSubtasks((prev) => {
+      const next = new Set(prev)
+      if (next.has(parentTaskId)) next.delete(parentTaskId)
+      else next.add(parentTaskId)
+      return next
+    })
+  }
+
+  function toggleParentTask(parentTaskId: string) {
+    setCollapsedParentTasks((prev) => {
+      const next = new Set(prev)
+      if (next.has(parentTaskId)) next.delete(parentTaskId)
+      else next.add(parentTaskId)
+      return next
+    })
   }
 
   /** 渲染一条任务及其子任务 */
   function renderTaskWithSubtasks(task: Task, extra?: { variant?: 'default' | 'overdue'; sortable?: boolean }) {
     const subtasks = subtasksByParent[task.id] ?? []
+    const incompleteSubtasks = subtasks.filter((s) => !s.is_completed)
+    const completedSubtasks = subtasks.filter((s) => s.is_completed)
+    const parentExpanded = !collapsedParentTasks.has(task.id)
+    const completedExpanded = !collapsedCompletedSubtasks.has(task.id)
+    const hasCompletedSubtasks = completedSubtasks.length > 0
+
     return (
       <div key={task.id}>
         <TaskItem key={task.id} {...taskItemProps(task, extra)} />
-        {subtasks.length > 0 && (
+        {parentExpanded && subtasks.length > 0 && (
           <div className="mt-1 space-y-1">
-            {subtasks.map((sub) => (
+            {/* 未完成的子任务 */}
+            {incompleteSubtasks.map((sub) => (
               <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} />
             ))}
+
+            {/* 已完成的子任务：可折叠，整体与子任务左对齐 */}
+            {hasCompletedSubtasks && (
+              <div className="relative mt-2">
+                <div className="absolute left-8 right-0 -top-1.5 h-px bg-canvas-3/40" />
+                <button
+                  onClick={() => toggleCompletedSubtasks(task.id)}
+                  className="mb-2 ml-8 flex items-center gap-1.5 text-xs font-medium text-ink-3 hover:text-ink transition-colors"
+                >
+                  <span className={`inline-block transition-transform ${completedExpanded ? 'rotate-90' : ''}`}>▸</span>
+                  <span>已完成子任务</span>
+                  <span className="rounded-full bg-canvas-2 px-1.5 py-0 text-[10px] text-ink-4">
+                    {completedSubtasks.length}
+                  </span>
+                </button>
+                {completedExpanded && (
+                  <div className="space-y-1">
+                    {completedSubtasks.map((sub) => (
+                      <TaskItem key={sub.id} {...taskItemProps(sub, { ...extra, isSubtask: true })} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -585,38 +704,70 @@ export function TaskListView() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {active.length === 0 ? (
-            <p className="py-16 text-center text-sm text-ink-4">
-              {isTodayView ? '✨ 今天没有到期的任务' : '✨ 暂无待办任务'}
-            </p>
-          ) : isTodayView ? (
+          {isTodayView ? (
+            /* 今日视图：今天/过期活跃任务 + 今天已完成 + 每日任务 */
             <>
-              {/* 今日任务 */}
-              {todayActive.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-royal">今天</h3>
-                  <SortableContext items={todayActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-2">
-                      {todayActive.map((task) => renderTaskWithSubtasks(task))}
+              {todayActive.length === 0 && overdueActive.length === 0 && todayCompleted.length === 0 ? (
+                <p className="py-16 text-center text-sm text-ink-4">✨ 今天没有到期的任务</p>
+              ) : (
+                <>
+                  {/* 今日任务 */}
+                  {todayActive.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-royal">今天</h3>
+                      <SortableContext items={todayActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {todayActive.map((task) => renderTaskWithSubtasks(task))}
+                        </div>
+                      </SortableContext>
                     </div>
-                  </SortableContext>
-                </div>
+                  )}
+
+                  {/* 过期未完成 */}
+                  {overdueActive.length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-prihigh">
+                        过期未完成 · {overdueActive.length}
+                      </h3>
+                      <SortableContext items={overdueActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
+                        <div className="space-y-2">
+                          {overdueActive.map((task) => renderTaskWithSubtasks(task, { variant: 'overdue' }))}
+                        </div>
+                      </SortableContext>
+                    </div>
+                  )}
+
+                  {/* 今日已完成 */}
+                  {todayCompleted.length > 0 && (
+                    <div className="relative mt-6">
+                      <div className="absolute inset-x-0 -top-3 h-px bg-canvas-3/40" />
+                      <div className="mb-3 flex items-center gap-1.5 text-xs font-medium text-ink-3">
+                        <span>今日已完成</span>
+                        <span className="rounded-full bg-canvas-2 px-1.5 py-0 text-[10px] text-ink-4">
+                          {todayCompleted.length}
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {todayCompleted.map((task) =>
+                          renderTaskWithSubtasks(task, { sortable: false }),
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* 过期未完成 — 标红放在下处 */}
-              {overdueActive.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-prihigh">
-                    过期未完成 · {overdueActive.length}
-                  </h3>
-                  <SortableContext items={overdueActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-2">
-                      {overdueActive.map((task) => renderTaskWithSubtasks(task, { variant: 'overdue' }))}
-                    </div>
-                  </SortableContext>
-                </div>
-              )}
+              <DailyRoutinesSection
+                dailyRoutines={dailyRoutines}
+                dailyCompletions={dailyCompletions}
+                dailyExpanded={dailyExpanded}
+                setDailyExpanded={setDailyExpanded}
+                dailyIncrement={dailyIncrement}
+                dailyDecrement={dailyDecrement}
+              />
             </>
+          ) : active.length === 0 ? (
+            <p className="py-16 text-center text-sm text-ink-4">✨ 暂无待办任务</p>
           ) : (
             /* 具体清单 / 所有任务：平铺显示全部活跃任务（含无日期） */
             <SortableContext items={active.filter((t) => !t.parent_task_id).map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
@@ -628,7 +779,7 @@ export function TaskListView() {
             </SortableContext>
           )}
 
-          {completed.length > 0 && (
+          {!isTodayView && completed.length > 0 && (
             <div className="relative mt-6">
               <div className="absolute inset-x-0 -top-3 h-px bg-canvas-3/40" />
               <button
@@ -647,47 +798,16 @@ export function TaskListView() {
             </div>
           )}
 
-          {/* 每日任务区域 */}
-          {(() => {
-            const today = todayKey()
-            const todayDow = new Date().getDay()
-            const todaysDaily = dailyRoutines.filter((r) => {
-              if (!r.active) return false
-              const days = JSON.parse(r.days_of_week || '[]') as number[]
-              if (days.length === 0) return true
-              return days.includes(todayDow)
-            })
-            if (todaysDaily.length === 0) return null
-            return (
-              <div className="relative mt-6 pt-4">
-                <div className="absolute inset-x-0 top-0 h-px bg-canvas-3/40" />
-                <button
-                  className="mb-3 flex w-full items-center justify-between text-[11px] font-semibold tracking-wide text-ink-3 uppercase transition-colors hover:text-ink"
-                  onClick={() => setDailyExpanded((v) => !v)}
-                >
-                  <span className="flex items-center gap-1.5">
-                    <span className={`inline-block transition-transform ${dailyExpanded ? 'rotate-90' : ''}`}>▸</span>
-                    每日打卡
-                  </span>
-                  <span className="text-[10px] font-normal normal-case">{todaysDaily.length}</span>
-                </button>
-                {dailyExpanded && (
-                  <div className="space-y-2">
-                    {todaysDaily.map((routine) => (
-                      <DailyTaskCard
-                        key={routine.id}
-                        routine={routine}
-                        completions={dailyCompletions}
-                        onCheck={(id, itemId) => void dailyIncrement(id, itemId)}
-                        onUncheck={(id, itemId) => void dailyDecrement(id, itemId)}
-                        onEdit={() => {}}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
+          {!isTodayView && (
+            <DailyRoutinesSection
+              dailyRoutines={dailyRoutines}
+              dailyCompletions={dailyCompletions}
+              dailyExpanded={dailyExpanded}
+              setDailyExpanded={setDailyExpanded}
+              dailyIncrement={dailyIncrement}
+              dailyDecrement={dailyDecrement}
+            />
+          )}
         </div>
       </div>
 

@@ -7,13 +7,14 @@ import { ColorSettingRow } from './ColorSettingRow'
 import { api } from '@/lib/api'
 import type { CloseBehavior } from '@shared/types'
 
-type TabKey = 'quick' | 'colors' | 'background' | 'icons'
+type TabKey = 'quick' | 'colors' | 'background' | 'icons' | 'backup'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'quick', label: '快捷设置', icon: '⚡' },
   { key: 'colors', label: '主题颜色', icon: '🎨' },
   { key: 'background', label: '背景图片', icon: '🖼️' },
   { key: 'icons', label: '图标设置', icon: '⭐' },
+  { key: 'backup', label: '数据备份', icon: '💾' },
 ]
 
 const COLOR_LABELS: Record<string, string> = {
@@ -117,6 +118,8 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           onRefresh={loadIcons}
         />
       )}
+
+      {tab === 'backup' && <BackupTab />}
     </Modal>
   )
 }
@@ -540,6 +543,69 @@ function IconsTab({
               </button>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── 数据备份标签页 ──
+function BackupTab() {
+  const store = useSettingsStore()
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      void store.loadBackupStatus()
+    }, 3000)
+    return () => clearInterval(id)
+  }, [store])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="mb-1 text-xs font-semibold tracking-wide text-ink-3 uppercase">备份位置</h3>
+        <p className="text-xs text-ink-4">
+          选择文件夹后，所有数据修改（任务、日记、习惯、图片、音效等）会自动同步到该位置
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="primary" size="sm" onClick={() => void store.selectBackupFolder()}>
+          选择备份文件夹
+        </Button>
+        {store.backupPath && (
+          <Button variant="danger" size="sm" onClick={() => void store.clearBackupPath()}>
+            清除备份
+          </Button>
+        )}
+      </div>
+
+      {store.backupPath ? (
+        <p className="break-all rounded-lg bg-canvas-2 px-3 py-2 text-xs font-mono text-ink-3">
+          {store.backupPath}
+        </p>
+      ) : (
+        <p className="text-xs text-ink-4">未启用自动备份</p>
+      )}
+
+      {store.backupStatus && (
+        <div className="space-y-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-ink-3">状态：</span>
+            <span className={store.backupStatus.isRunning ? 'text-royal' : store.backupStatus.lastError ? 'text-red-500' : 'text-emerald-600'}>
+              {store.backupStatus.isRunning ? '备份中…' : store.backupStatus.lastError ? '上次失败' : '正常'}
+            </span>
+          </div>
+          {store.backupStatus.lastSuccessAt && (
+            <div className="text-ink-3">
+              上次成功：{new Date(store.backupStatus.lastSuccessAt).toLocaleString()}
+            </div>
+          )}
+          {store.backupStatus.lastError && (
+            <div className="rounded-lg bg-red-50 px-3 py-2 text-red-600">
+              失败原因：{store.backupStatus.lastError}
+            </div>
+          )}
         </div>
       )}
     </div>

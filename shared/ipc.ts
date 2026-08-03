@@ -29,6 +29,12 @@ export const IpcChannels = {
   settingsGetAll: 'settings:getAll',
   settingsUpdate: 'settings:update',
 
+  // backup
+  backupSelectFolder: 'backup:selectFolder',
+  backupGetStatus: 'backup:getStatus',
+  backupSetPath: 'backup:setPath',
+  backupClearPath: 'backup:clearPath',
+
   // file dialogs
   dialogOpenImageFile: 'dialog:openImageFile',
 

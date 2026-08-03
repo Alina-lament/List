@@ -258,4 +258,5 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   taskSortMode: 'free',
   taskCompleteSoundEnabled: '1',
   taskCompleteSoundVolume: '80',
+  backupPath: '',
 }

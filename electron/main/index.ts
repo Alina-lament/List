@@ -14,6 +14,7 @@ import { createSettingsRepository } from './db/repositories/settingsRepo'
 import { registerIpcHandlers } from './ipc'
 import { ensureDefaultSounds } from './sounds'
 import { startReminderScheduler } from './reminders/scheduler'
+import { createBackupService, type BackupService } from './backup'
 import {
   APP_USER_MODEL_ID,
   applyStartupTaskbarIcon,
@@ -64,6 +65,7 @@ if (process.platform === 'win32') {
 
 let mainWindow: BrowserWindow | null = null
 let isQuitting = false
+let backupService: BackupService | null = null
 
 // 单实例锁：必须在 app.whenReady() 之前请求
 const gotTheLock = app.requestSingleInstanceLock()
@@ -136,6 +138,7 @@ app.whenReady().then(() => {
   const dbPath = join(dataRoot, 'db', 'younglife.db')
   const db = initDatabase(dbPath)
 
+  backupService = createBackupService(db, dataRoot)
   const tasks = createTaskRepository(db)
   const lists = createListRepository(db)
   const tags = createTagRepository(db)
@@ -144,7 +147,15 @@ app.whenReady().then(() => {
   const journal = createJournalRepository(db)
   const countdowns = createCountdownRepository(db)
 
-  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, countdowns, dataRoot })
+  // 如果用户已设置备份路径，启动时初始化并执行一次全量同步
+  const backupPathSetting = settings.get('backupPath')
+  if (backupPathSetting?.value) {
+    backupService.setPath(backupPathSetting.value).catch((err) => {
+      console.error('[main] 初始化备份路径失败:', err)
+    })
+  }
+
+  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, countdowns, dataRoot, backupService })
   startReminderScheduler(tasks)
 
   // 迁移后修正图标路径（从旧安装目录 → 新 userData 目录）
@@ -181,9 +192,13 @@ app.whenReady().then(() => {
   }
 
   // 系统关机或从托盘退出时直接放行，不再询问
-  app.on('before-quit', () => {
+  app.on('before-quit', async () => {
     isQuitting = true
     destroyTray()
+    // 等待进行中的数据库备份完成，避免退出时备份文件损坏
+    if (backupService) {
+      await backupService.waitForRunningBackup(3000).catch(() => {})
+    }
   })
 
   // 根据用户设置处理窗口关闭行为

@@ -20,6 +20,14 @@ import type {
   UpdateTaskInput,
 } from './types'
 
+export interface BackupStatus {
+  enabled: boolean
+  path: string | null
+  lastError: string | null
+  lastSuccessAt: string | null
+  isRunning: boolean
+}
+
 export interface Api {
   getTasksByDateRange(start: string, end: string): Promise<TasksByRangeResult>
   getTasksByList(listId: string): Promise<Task[]>
@@ -51,6 +59,12 @@ export interface Api {
   // Settings
   getAllSettings(): Promise<SettingsRow[]>
   updateSetting(key: string, value: string): Promise<SettingsRow>
+
+  // Backup
+  selectBackupFolder(): Promise<string | null>
+  getBackupStatus(): Promise<BackupStatus>
+  setBackupPath(path: string): Promise<BackupStatus>
+  clearBackupPath(): Promise<BackupStatus>
 
   // File dialogs
   openImageFileDialog(): Promise<string | null>
