@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
+import { playSoundFromDataUrl } from '@/lib/sound'
 import { useSettingsStore } from '@/features/settings/store'
 
 export type ViewMode = 'today' | 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
@@ -59,10 +60,8 @@ function sortListTasks(tasks: Task[]): Task[] {
 function playTaskCompleteSound(): void {
   const { taskCompleteSoundEnabled, taskCompleteSoundVolume, taskCompleteSoundUrl } = useSettingsStore.getState()
   if (!taskCompleteSoundEnabled || !taskCompleteSoundUrl) return
-  const audio = new Audio(taskCompleteSoundUrl)
-  audio.volume = taskCompleteSoundVolume / 100
-  void audio.play().catch(() => {
-    // 自动播放策略等导致失败时静默忽略
+  void playSoundFromDataUrl(taskCompleteSoundUrl, taskCompleteSoundVolume / 100).catch((err) => {
+    console.error('[tasks] 播放完成音效失败:', err)
   })
 }
 

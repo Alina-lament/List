@@ -61,8 +61,8 @@ function DailyRoutinesSection({
               key={routine.id}
               routine={routine}
               completions={dailyCompletions}
-              onCheck={(id, itemId) => void dailyIncrement(id, todayKey(), itemId)}
-              onUncheck={(id, itemId) => void dailyDecrement(id, todayKey(), itemId)}
+              onCheck={(id, itemId) => void dailyIncrement(id, itemId)}
+              onUncheck={(id, itemId) => void dailyDecrement(id, itemId)}
               onEdit={() => {}}
             />
           ))}
@@ -105,8 +105,10 @@ export function TaskListView() {
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
-  const [collapsedCompletedSubtasks, setCollapsedCompletedSubtasks] = useState<Set<string>>(new Set())
-  const [collapsedParentTasks, setCollapsedParentTasks] = useState<Set<string>>(new Set())
+  const collapsedParentTasks = useSettingsStore((s) => s.collapsedParentTasks)
+  const collapsedCompletedSubtasks = useSettingsStore((s) => s.collapsedCompletedSubtasks)
+  const toggleCollapsedParent = useSettingsStore((s) => s.toggleCollapsedParent)
+  const toggleCollapsedCompleted = useSettingsStore((s) => s.toggleCollapsedCompleted)
   const { detailWidth, setDetailWidth, saveDetailWidth, showDetailCalendar } = useLayoutStore()
   const {
     routines: dailyRoutines,
@@ -305,26 +307,16 @@ export function TaskListView() {
       onInlineCreateNext: extra?.isSubtask ? handleCreateNextSubtask : undefined,
       hasSubtasks,
       subtasksExpanded: !collapsedParentTasks.has(task.id),
-      onToggleSubtasks: hasSubtasks ? () => toggleParentTask(task.id) : undefined,
+      onToggleSubtasks: hasSubtasks ? () => handleToggleParentTask(task.id) : undefined,
     }
   }
 
-  function toggleCompletedSubtasks(parentTaskId: string) {
-    setCollapsedCompletedSubtasks((prev) => {
-      const next = new Set(prev)
-      if (next.has(parentTaskId)) next.delete(parentTaskId)
-      else next.add(parentTaskId)
-      return next
-    })
+  function handleToggleCompletedSubtasks(parentTaskId: string) {
+    void toggleCollapsedCompleted(parentTaskId)
   }
 
-  function toggleParentTask(parentTaskId: string) {
-    setCollapsedParentTasks((prev) => {
-      const next = new Set(prev)
-      if (next.has(parentTaskId)) next.delete(parentTaskId)
-      else next.add(parentTaskId)
-      return next
-    })
+  function handleToggleParentTask(parentTaskId: string) {
+    void toggleCollapsedParent(parentTaskId)
   }
 
   /** 渲染一条任务及其子任务 */
@@ -351,7 +343,7 @@ export function TaskListView() {
               <div className="relative mt-2">
                 <div className="absolute left-8 right-0 -top-1.5 h-px bg-canvas-3/40" />
                 <button
-                  onClick={() => toggleCompletedSubtasks(task.id)}
+                    onClick={() => handleToggleCompletedSubtasks(task.id)}
                   className="mb-2 ml-8 flex items-center gap-1.5 text-xs font-medium text-ink-3 hover:text-ink transition-colors"
                 >
                   <span className={`inline-block transition-transform ${completedExpanded ? 'rotate-90' : ''}`}>▸</span>

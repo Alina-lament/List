@@ -41,7 +41,11 @@ export interface SettingsState {
   // 音效
   taskCompleteSoundEnabled: boolean
   taskCompleteSoundVolume: number
+  taskCompleteSoundFile: string
   taskCompleteSoundUrl: string | null
+  // 任务折叠状态
+  collapsedParentTasks: Set<string>
+  collapsedCompletedSubtasks: Set<string>
   // 备份
   backupPath: string | null
   backupStatus: BackupStatus | null
@@ -62,7 +66,10 @@ export interface SettingsState {
   setTaskSortMode(mode: 'free' | 'priority' | 'name'): Promise<void>
   setTaskCompleteSoundEnabled(enabled: boolean): Promise<void>
   setTaskCompleteSoundVolume(volume: number): Promise<void>
-  loadTaskCompleteSound(): Promise<void>
+  setTaskCompleteSoundFile(fileName: string): Promise<void>
+  loadTaskCompleteSound(fileName?: string): Promise<void>
+  toggleCollapsedParent(taskId: string): Promise<void>
+  toggleCollapsedCompleted(taskId: string): Promise<void>
   selectBackupFolder(): Promise<void>
   clearBackupPath(): Promise<void>
   loadBackupStatus(): Promise<void>
@@ -83,6 +90,17 @@ function parseMap(rows: { key: string; value: string }[]): Record<string, string
   const map: Record<string, string> = {}
   for (const r of rows) map[r.key] = r.value
   return map
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (typeof value !== 'string' || !value.trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    if (Array.isArray(parsed)) return parsed.filter((v): v is string => typeof v === 'string')
+  } catch {
+    // ignore invalid JSON
+  }
+  return []
 }
 
 // 预设主题
@@ -137,7 +155,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   closeBehavior: (getDefault('closeBehavior') as CloseBehavior) || 'ask',
   taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
   taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
+  taskCompleteSoundFile: getDefault('taskCompleteSoundFile') || 'complete.wav',
   taskCompleteSoundUrl: null,
+  collapsedParentTasks: new Set<string>(),
+  collapsedCompletedSubtasks: new Set<string>(),
   backupPath: null,
   backupStatus: null,
   loading: false,
@@ -174,7 +195,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         closeBehavior: (map.closeBehavior as CloseBehavior) || 'ask',
         taskCompleteSoundEnabled: (map.taskCompleteSoundEnabled ?? getDefault('taskCompleteSoundEnabled')) === '1',
         taskCompleteSoundVolume: parseNum(map.taskCompleteSoundVolume, parseNum(getDefault('taskCompleteSoundVolume'), 80)),
-        taskCompleteSoundUrl: await api.getSoundDataUrl('complete'),
+        taskCompleteSoundFile: map.taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav',
+        taskCompleteSoundUrl: await api.getSoundDataUrl(map.taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav'),
+        collapsedParentTasks: new Set(parseStringArray(map.collapsedParentTasks)),
+        collapsedCompletedSubtasks: new Set(parseStringArray(map.collapsedCompletedSubtasks)),
         bgImagePath: await api.getBgImagePath(),
         bgImageDataUrl: await api.getBgImageDataUrl(),
         backupPath: map.backupPath || null,
@@ -264,9 +288,33 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ taskCompleteSoundVolume: v })
   },
 
-  async loadTaskCompleteSound() {
-    const url = await api.getSoundDataUrl('complete')
+  async setTaskCompleteSoundFile(fileName) {
+    if (!fileName) return
+    await api.updateSetting('taskCompleteSoundFile', fileName)
+    const url = await api.getSoundDataUrl(fileName)
+    set({ taskCompleteSoundFile: fileName, taskCompleteSoundUrl: url })
+  },
+
+  async loadTaskCompleteSound(fileName) {
+    const name = fileName || get().taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav'
+    const url = await api.getSoundDataUrl(name)
     set({ taskCompleteSoundUrl: url })
+  },
+
+  async toggleCollapsedParent(taskId) {
+    const next = new Set(get().collapsedParentTasks)
+    if (next.has(taskId)) next.delete(taskId)
+    else next.add(taskId)
+    await api.updateSetting('collapsedParentTasks', JSON.stringify([...next]))
+    set({ collapsedParentTasks: next })
+  },
+
+  async toggleCollapsedCompleted(taskId) {
+    const next = new Set(get().collapsedCompletedSubtasks)
+    if (next.has(taskId)) next.delete(taskId)
+    else next.add(taskId)
+    await api.updateSetting('collapsedCompletedSubtasks', JSON.stringify([...next]))
+    set({ collapsedCompletedSubtasks: next })
   },
 
   async selectBackupFolder() {
@@ -319,6 +367,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       prilow: getDefault('prilow'),
       taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
       taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
+      taskCompleteSoundFile: getDefault('taskCompleteSoundFile') || 'complete.wav',
+      collapsedParentTasks: new Set<string>(),
+      collapsedCompletedSubtasks: new Set<string>(),
     })
   },
 }))

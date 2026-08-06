@@ -202,6 +202,33 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_daily_routines_archived ON daily_routines(is_archived);
     `,
   },
+  {
+    version: 9,
+    sql: `
+      -- daily_completions 原唯一约束为 (routine_id, date)，不支持按子项分别打卡。
+      -- 重建表，将唯一约束改为 (routine_id, item_id, date)，并清理因旧 bug 产生的无效 item_id。
+      CREATE TABLE daily_completions_new (
+        id         TEXT PRIMARY KEY,
+        routine_id TEXT NOT NULL REFERENCES daily_routines(id) ON DELETE CASCADE,
+        item_id    TEXT REFERENCES daily_routine_items(id) ON DELETE CASCADE,
+        date       TEXT NOT NULL,
+        count      INTEGER DEFAULT 0,
+        UNIQUE(routine_id, item_id, date)
+      );
+
+      INSERT INTO daily_completions_new (id, routine_id, item_id, date, count)
+      SELECT id, routine_id, item_id, date, count
+      FROM daily_completions
+      WHERE item_id IS NULL
+         OR item_id IN (SELECT id FROM daily_routine_items);
+
+      DROP TABLE daily_completions;
+      ALTER TABLE daily_completions_new RENAME TO daily_completions;
+
+      CREATE INDEX idx_daily_completions_date ON daily_completions(date);
+      CREATE INDEX idx_daily_completions_item_date ON daily_completions(item_id, date);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {

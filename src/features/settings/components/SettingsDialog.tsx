@@ -5,6 +5,7 @@ import { Select } from '@/components/ui/Input'
 import { useSettingsStore } from '../store'
 import { ColorSettingRow } from './ColorSettingRow'
 import { api } from '@/lib/api'
+import { playSoundFromDataUrl } from '@/lib/sound'
 import type { CloseBehavior } from '@shared/types'
 
 type TabKey = 'quick' | 'colors' | 'background' | 'icons' | 'backup'
@@ -132,9 +133,17 @@ function QuickTab() {
   const updateCloseBehavior = useSettingsStore((s) => s.updateCloseBehavior)
   const taskCompleteSoundEnabled = useSettingsStore((s) => s.taskCompleteSoundEnabled)
   const taskCompleteSoundVolume = useSettingsStore((s) => s.taskCompleteSoundVolume)
+  const taskCompleteSoundFile = useSettingsStore((s) => s.taskCompleteSoundFile)
   const taskCompleteSoundUrl = useSettingsStore((s) => s.taskCompleteSoundUrl)
   const setTaskCompleteSoundEnabled = useSettingsStore((s) => s.setTaskCompleteSoundEnabled)
   const setTaskCompleteSoundVolume = useSettingsStore((s) => s.setTaskCompleteSoundVolume)
+  const setTaskCompleteSoundFile = useSettingsStore((s) => s.setTaskCompleteSoundFile)
+  const [soundFiles, setSoundFiles] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    void api.listSounds().then(setSoundFiles)
+  }, [open])
 
   const CLOSE_BEHAVIOR_OPTIONS: { value: CloseBehavior; label: string }[] = [
     { value: 'ask', label: '每次询问' },
@@ -200,14 +209,27 @@ function QuickTab() {
               onChange={(e) => void setTaskCompleteSoundVolume(Number(e.target.value))}
               className="w-full accent-royal"
             />
+            <div className="mt-3">
+              <label className="mb-1 block text-xs text-ink-3">完成音效</label>
+              <Select
+                value={taskCompleteSoundFile}
+                onChange={(e) => void setTaskCompleteSoundFile(e.target.value)}
+              >
+                {soundFiles.map((file) => (
+                  <option key={file} value={file}>
+                    {file.replace(/\.wav$/i, '')}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
           <div className="mt-3 flex justify-end">
             <button
               onClick={() => {
                 if (!taskCompleteSoundUrl) return
-                const audio = new Audio(taskCompleteSoundUrl)
-                audio.volume = taskCompleteSoundVolume / 100
-                void audio.play()
+                void playSoundFromDataUrl(taskCompleteSoundUrl, taskCompleteSoundVolume / 100).catch((err) => {
+                  console.error('[settings] 测试音效播放失败:', err)
+                })
               }}
               disabled={!taskCompleteSoundEnabled || !taskCompleteSoundUrl}
               className="rounded-lg bg-canvas-2 px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors hover:bg-canvas-3 hover:text-ink disabled:opacity-40"

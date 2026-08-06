@@ -66,7 +66,11 @@ export function listSounds(dataRoot: string): string[] {
 
 export function getSoundDataUrl(dataRoot: string, fileName: string): string | null {
   const soundsDir = getSoundsFolder(dataRoot)
-  const filePath = join(soundsDir, fileName)
+  let filePath = join(soundsDir, fileName)
+  // 兼容只传基础名（如 'complete'）的情况，默认尝试 .wav
+  if (!existsSync(filePath) && !fileName.includes('.')) {
+    filePath = `${filePath}.wav`
+  }
   if (!existsSync(filePath)) return null
   const buf = readFileSync(filePath)
   const ext = fileName.split('.').pop()?.toLowerCase() ?? 'wav'
