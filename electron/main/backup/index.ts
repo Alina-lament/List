@@ -21,7 +21,7 @@ export interface BackupService {
   waitForRunningBackup(timeoutMs?: number): Promise<void>
 }
 
-const BACKUP_DIRS = ['db', 'icons', 'backgrounds', 'brand', 'countdowns', 'sounds']
+const BACKUP_DIRS = ['db', 'icons', 'backgrounds', 'brand', 'countdowns', 'sounds', 'tomatoes']
 const DEBOUNCE_MS = 800
 const POLL_INTERVAL_MS = 1000
 

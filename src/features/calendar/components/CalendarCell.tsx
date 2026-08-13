@@ -4,7 +4,7 @@ import type { CalendarTaskInstance } from '@/types/calendar'
 import { isCurrentMonth, isToday } from '@/lib/date-utils'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 
-const MAX_VISIBLE = 5
+const MAX_VISIBLE = 7
 
 interface Props {
   date: string
@@ -15,6 +15,8 @@ interface Props {
   onCreateAt: (date: string) => void
   onSelectWeek?: () => void
   isWeekSelected?: boolean
+  weekNumber?: number
+  showWeekNumber?: boolean
 }
 
 export const CalendarCell = memo(function CalendarCell({
@@ -26,6 +28,8 @@ export const CalendarCell = memo(function CalendarCell({
   onCreateAt,
   onSelectWeek,
   isWeekSelected,
+  weekNumber,
+  showWeekNumber,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: `cell:${date}`, data: { date } })
   const dayOfMonth = Number(date.slice(8, 10))
@@ -57,13 +61,13 @@ export const CalendarCell = memo(function CalendarCell({
           title={isWeekSelected ? '取消选择本周' : '选择本周'}
         />
       )}
-      <div className="flex flex-1 flex-col p-1.5">
+      <div className="flex flex-1 flex-col p-1">
         {/* 日期号 */}
-        <div className="mb-1 flex justify-end shrink-0">
+        <div className="mb-0.5 flex shrink-0 items-start justify-between">
           <span
-            className={`flex h-6 w-6 items-center justify-center text-xs font-bold transition-all ${
+            className={`flex h-5 w-5 items-center justify-center text-[11px] font-bold transition-all ${
               today
-                ? 'rounded-full bg-royal text-white shadow-sm'
+                ? 'rounded-full bg-ink text-white shadow-sm'
                 : inMonth
                   ? 'font-semibold text-ink'
                   : 'text-ink-4'
@@ -71,10 +75,13 @@ export const CalendarCell = memo(function CalendarCell({
           >
             {dayOfMonth}
           </span>
+          {showWeekNumber && (
+            <span className="text-[9px] text-ink-3">{weekNumber}周</span>
+          )}
         </div>
 
         {/* 任务列表 — 占据剩余空间 */}
-        <div className="min-h-0 flex-1 space-y-1">
+        <div className="min-h-0 flex-1 space-y-0.5">
           {visible.map((instance) => (
             <CalendarTaskBlock
               key={instance.instance_id}

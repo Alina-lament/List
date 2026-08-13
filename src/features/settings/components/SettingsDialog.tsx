@@ -6,15 +6,17 @@ import { useSettingsStore } from '../store'
 import { ColorSettingRow } from './ColorSettingRow'
 import { api } from '@/lib/api'
 import { playSoundFromDataUrl } from '@/lib/sound'
+import { TomatoIcon } from '@/features/pomodoro/components/TomatoIcon'
 import type { CloseBehavior } from '@shared/types'
 
-type TabKey = 'quick' | 'colors' | 'background' | 'icons' | 'backup'
+type TabKey = 'quick' | 'colors' | 'background' | 'icons' | 'tomato' | 'backup'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'quick', label: '快捷设置', icon: '⚡' },
   { key: 'colors', label: '主题颜色', icon: '🎨' },
   { key: 'background', label: '背景图片', icon: '🖼️' },
   { key: 'icons', label: '图标设置', icon: '⭐' },
+  { key: 'tomato', label: '番茄样式', icon: '🍅' },
   { key: 'backup', label: '数据备份', icon: '💾' },
 ]
 
@@ -45,17 +47,24 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [tab, setTab] = useState<TabKey>('quick')
   const [icons, setIcons] = useState<string[]>([])
   const [previewBg, setPreviewBg] = useState<string | null>(null)
+  const [tomatoImages, setTomatoImages] = useState<string[]>([])
 
   useEffect(() => {
     if (!open) return
     setTab('quick')
     setPreviewBg(store.bgImagePath)
     void loadIcons()
+    void loadTomatoImages()
   }, [open])
 
   async function loadIcons() {
     const list = await api.listIcons()
     setIcons(list)
+  }
+
+  async function loadTomatoImages() {
+    const list = await api.listTomatoImages()
+    setTomatoImages(list)
   }
 
   async function handleSelectImage() {
@@ -75,6 +84,18 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     const folder = await api.getIconsFolder()
     const path = `${folder}\\${fileName}`
     await store.setAppIcon(path)
+  }
+
+  async function handleSelectTomatoImage(fileName: string) {
+    await store.setTomatoImage(fileName)
+  }
+
+  async function handleImportTomatoImage() {
+    const filePath = await api.openImageFileDialog()
+    if (!filePath) return
+    const fileName = await api.setTomatoImage(filePath)
+    await store.setTomatoImage(fileName)
+    await loadTomatoImages()
   }
 
   return (
@@ -117,6 +138,16 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           icons={icons}
           onSelectIcon={handleSelectIcon}
           onRefresh={loadIcons}
+        />
+      )}
+
+      {tab === 'tomato' && (
+        <TomatoTab
+          store={store}
+          images={tomatoImages}
+          onSelect={handleSelectTomatoImage}
+          onImport={handleImportTomatoImage}
+          onRefresh={loadTomatoImages}
         />
       )}
 
@@ -572,6 +603,127 @@ function IconsTab({
 }
 
 // ── 数据备份标签页 ──
+function TomatoTab({
+  store,
+  images,
+  onImport,
+  onSelect,
+  onRefresh,
+}: {
+  store: ReturnType<typeof useSettingsStore.getState>
+  images: string[]
+  onImport: () => void
+  onSelect: (fileName: string) => void
+  onRefresh: () => void
+}) {
+  const [tomatoFolder, setTomatoFolder] = useState('')
+  const [tomatoDataUrls, setTomatoDataUrls] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    void api.getTomatoImagesFolder().then(setTomatoFolder)
+  }, [])
+
+  useEffect(() => {
+    void Promise.all(
+      images.map(async (file) => {
+        const url = await api.getTomatoImageDataUrl(file)
+        return { file, url }
+      }),
+    ).then((results) => {
+      const map: Record<string, string> = {}
+      for (const { file, url } of results) {
+        if (url) map[file] = url
+      }
+      setTomatoDataUrls(map)
+    })
+  }, [images])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" size="sm" onClick={onImport}>
+          📥 导入图片
+        </Button>
+        <Button size="sm" onClick={() => void api.openTomatoImagesFolder()}>
+          📂 打开图片文件夹
+        </Button>
+        <Button size="sm" onClick={onRefresh}>
+          🔄 刷新
+        </Button>
+        {store.tomatoImageFile && (
+          <Button variant="danger" size="sm" onClick={() => void store.clearTomatoImage()}>
+            恢复默认
+          </Button>
+        )}
+      </div>
+
+      <p className="text-xs text-ink-4">
+        将 PNG / JPG / WebP / GIF 图片放入以下数据文件夹，即可选为番茄样式：
+      </p>
+      <p className="break-all rounded-lg bg-canvas-2 px-3 py-2 text-xs font-mono text-ink-3">
+        {tomatoFolder || '加载中...'}
+      </p>
+
+      <div className="rounded-xl border border-canvas-3 bg-white px-4 py-3">
+        <div className="mb-2 text-xs font-medium text-ink-3">当前样式</div>
+        <div className="flex items-center gap-3">
+          <div
+            className={`h-14 w-14 shrink-0 rounded-xl border p-2 ${
+              store.tomatoImageFile
+                ? 'border-canvas-3'
+                : 'border-royal bg-royal-50 ring-2 ring-royal-50/50'
+            }`}
+          >
+            {store.tomatoImageDataUrl ? (
+              <img src={store.tomatoImageDataUrl} alt="" className="h-full w-full object-contain" />
+            ) : (
+              <TomatoIcon />
+            )}
+          </div>
+          <div className="min-w-0 flex-1 text-xs text-ink-3">
+            {store.tomatoImageFile ? (
+              <span className="block break-all font-medium text-ink">{store.tomatoImageFile}</span>
+            ) : (
+              <span>默认番茄样式（内置）</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {images.length === 0 ? (
+        <p className="py-8 text-center text-sm text-ink-4">
+          暂无番茄图片，请将图片放入上方文件夹后点击刷新
+        </p>
+      ) : (
+        <div className="grid grid-cols-5 gap-2">
+          {images.map((file) => {
+            const selected = store.tomatoImageFile === file
+            const dataUrl = tomatoDataUrls[file]
+            return (
+              <button
+                key={file}
+                onClick={() => onSelect(file)}
+                title={file}
+                className={`flex items-center justify-center rounded-xl border p-3 transition-all hover:shadow-card ${
+                  selected
+                    ? 'border-royal bg-royal-50 ring-2 ring-royal-50/50'
+                    : 'border-canvas-3 hover:border-canvas-4'
+                }`}
+              >
+                {dataUrl ? (
+                  <img src={dataUrl} alt={file} className="h-12 w-12 object-contain" />
+                ) : (
+                  <span className="flex h-12 w-12 items-center justify-center text-lg">🍅</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BackupTab() {
   const store = useSettingsStore()
 

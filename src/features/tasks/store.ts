@@ -1,16 +1,17 @@
 import { create } from 'zustand'
-import type { CreateTaskInput, List, Tag, Task, UpdateTaskInput } from '@shared/types'
+import type { CreateTaskInput, List, PomodoroStats, Tag, Task, UpdateTaskInput } from '@shared/types'
 import { api } from '@/lib/api'
 import { playSoundFromDataUrl } from '@/lib/sound'
 import { useSettingsStore } from '@/features/settings/store'
 
-export type ViewMode = 'today' | 'list' | 'calendar' | 'daily' | 'journal' | 'countdown'
+export type ViewMode = 'today' | 'list' | 'calendar' | 'daily' | 'journal' | 'pomodoro' | 'countdown'
 
 interface TasksState {
   lists: List[]
   tags: Tag[]
   taskTags: Record<string, string[]>
   tasksByList: Record<string, Task[]>
+  taskPomodoroStats: Record<string, PomodoroStats>
   selectedListId: string | null
   selectedTaskId: string | null
   view: ViewMode
@@ -44,6 +45,7 @@ interface TasksState {
   deleteTag(id: string): Promise<void>
 
   clearError(): void
+  refreshPomodoroStats(taskIds: string[]): Promise<void>
   /** 获取「待定」清单 ID（无日期任务的默认存放处） */
   getPendingListId(): string | null
 }
@@ -70,6 +72,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   tags: [],
   taskTags: {},
   tasksByList: {},
+  taskPomodoroStats: {},
   selectedListId: null,
   selectedTaskId: null,
   view: 'today',
@@ -133,6 +136,7 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
       set((s) => ({
         tasksByList: { ...s.tasksByList, [id]: tasks },
       }))
+      void get().refreshPomodoroStats(tasks.map((t) => t.id))
     } catch {
       // 数据加载失败，但选中高亮已更新
     }
@@ -150,6 +154,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     set((s) => ({
       tasksByList: { ...s.tasksByList, ...tasksByList },
     }))
+    const allIds = Object.values(tasksByList).flat().map((t) => t.id)
+    void get().refreshPomodoroStats(allIds)
   },
 
   selectTask(id) {
@@ -430,6 +436,18 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   clearError() {
     set({ error: null })
+  },
+
+  async refreshPomodoroStats(taskIds) {
+    if (taskIds.length === 0) return
+    try {
+      const stats = await api.getPomodoroStatsByTaskIds(taskIds)
+      set((s) => ({
+        taskPomodoroStats: { ...s.taskPomodoroStats, ...stats },
+      }))
+    } catch (e) {
+      console.error('加载番茄统计失败:', e)
+    }
   },
 
   getPendingListId() {

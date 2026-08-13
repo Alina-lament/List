@@ -22,11 +22,11 @@ export function shiftMonth(year: number, month: number, delta: number): { year: 
   return { year: Math.floor(total / 12), month: (total % 12) + 1 }
 }
 
-/** 返回覆盖整月的 6×7 = 42 天网格（周一起始）的 dateKey 数组 */
+/** 返回覆盖整月的 6×7 = 42 天网格（周日起始）的 dateKey 数组 */
 export function getMonthGrid(year: number, month: number): string[] {
   const first = new Date(year, month - 1, 1)
-  // 周一为一周起点：Mon=0 ... Sun=6
-  const startOffset = (first.getDay() + 6) % 7
+  // 周日为一周起点：Sun=0 ... Sat=6
+  const startOffset = first.getDay()
   const gridStart = new Date(year, month - 1, 1 - startOffset)
   const days: string[] = []
   for (let i = 0; i < 42; i++) {

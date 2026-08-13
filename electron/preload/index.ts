@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Api } from '@shared/api'
 import { IpcChannels } from '@shared/ipc'
-import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreatePomodoroInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
 
 const api: Api = {
   getTasksByDateRange: (start, end) =>
@@ -69,6 +69,13 @@ const api: Api = {
   listSounds: () => ipcRenderer.invoke(IpcChannels.soundsList),
   getSoundDataUrl: (fileName) => ipcRenderer.invoke(IpcChannels.soundsGetDataUrl, fileName),
 
+  // Tomato style
+  getTomatoImagesFolder: () => ipcRenderer.invoke(IpcChannels.tomatoesGetFolder),
+  listTomatoImages: () => ipcRenderer.invoke(IpcChannels.tomatoesList),
+  openTomatoImagesFolder: () => ipcRenderer.invoke(IpcChannels.tomatoesOpenFolder),
+  setTomatoImage: (filePath) => ipcRenderer.invoke(IpcChannels.tomatoesSetImage, filePath),
+  getTomatoImageDataUrl: (fileName) => ipcRenderer.invoke(IpcChannels.tomatoesGetDataUrl, fileName),
+
   // Brand
   setBrandImage: (filePath) => ipcRenderer.invoke(IpcChannels.brandSetImage, filePath),
   getBrandDataUrl: () => ipcRenderer.invoke(IpcChannels.brandGetDataUrl),
@@ -104,6 +111,15 @@ const api: Api = {
   advanceCountdowns: () => ipcRenderer.invoke(IpcChannels.countdownAdvance),
   setCountdownBg: (id, filePath) => ipcRenderer.invoke(IpcChannels.countdownSetBg, id, filePath),
   getCountdownBgDataUrl: (id) => ipcRenderer.invoke(IpcChannels.countdownGetBgDataUrl, id),
+
+  // Pomodoro
+  createPomodoroRecord: (input: CreatePomodoroInput) => ipcRenderer.invoke(IpcChannels.pomodoroCreateRecord, input),
+  deletePomodoroRecord: (id: string) => ipcRenderer.invoke(IpcChannels.pomodoroDeleteRecord, id),
+  getTodayPomodoroRecords: () => ipcRenderer.invoke(IpcChannels.pomodoroGetTodayRecords),
+  getRecentPomodoroRecords: (limit?: number) => ipcRenderer.invoke(IpcChannels.pomodoroGetRecentRecords, limit),
+  getTotalPomodoroStats: () => ipcRenderer.invoke(IpcChannels.pomodoroGetTotalStats),
+  getPomodoroStatsByTaskIds: (taskIds) => ipcRenderer.invoke(IpcChannels.pomodoroGetStatsByTaskIds, taskIds),
+  pomodoroNotify: (title, body) => ipcRenderer.invoke(IpcChannels.pomodoroNotify, title, body),
 }
 
 contextBridge.exposeInMainWorld('api', api)

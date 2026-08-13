@@ -6,12 +6,14 @@ interface Props {
   completions: DailyCompletion[]
   year: number
   month: number
+  selectedDate: string
+  onSelectDate: (date: string) => void
   onChangeMonth: (year: number, month: number) => void
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
-function isRoutineActiveOnDate(routine: DailyRoutine, date: string): boolean {
+export function isRoutineActiveOnDate(routine: DailyRoutine, date: string): boolean {
   if (routine.is_archived) return false
   if (!routine.active) return false
   if (routine.start_date && date < routine.start_date) return false
@@ -41,7 +43,7 @@ function completionFor(routine: DailyRoutine, date: string, completions: DailyCo
   return { count, target: routine.target_count, done: count >= routine.target_count }
 }
 
-export function DailyCalendar({ routines, completions, year, month, onChangeMonth }: Props) {
+export function DailyCalendar({ routines, completions, year, month, selectedDate, onSelectDate, onChangeMonth }: Props) {
   const first = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
   const daysInMonth = first.daysInMonth()
   const today = dayjs().format('YYYY-MM-DD')
@@ -102,23 +104,31 @@ export function DailyCalendar({ routines, completions, year, month, onChangeMont
               <div className="sticky left-0 bg-white px-3 text-sm font-bold text-ink">每日任务</div>
               {dates.map((date) => {
                 const isToday = date === today
+                const isSelected = date === selectedDate
                 const dayNum = date.slice(8, 10)
                 const weekday = WEEKDAYS[(dayjs(date).day() + 6) % 7]
                 return (
                   <div
                     key={date}
                     className={`flex flex-col items-center justify-center gap-1 py-1 text-xs ${
-                      isToday ? 'font-bold text-royal' : 'text-ink-3'
+                      isToday || isSelected ? 'font-bold text-royal' : 'text-ink-3'
                     }`}
                   >
                     <span>{weekday}</span>
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                        isToday ? 'bg-royal text-white shadow-sm' : ''
+                    <button
+                      onClick={() => onSelectDate(date)}
+                      title={`查看 ${date} 的完成情况`}
+                      aria-label={`查看 ${date}`}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                        isToday
+                          ? 'bg-royal text-white shadow-sm hover:bg-royal/90'
+                          : isSelected
+                            ? 'text-royal ring-2 ring-royal hover:bg-royal-50'
+                            : 'hover:bg-canvas-2'
                       }`}
                     >
                       {dayNum}
-                    </span>
+                    </button>
                   </div>
                 )
               })}
@@ -211,6 +221,7 @@ export function DailyCalendar({ routines, completions, year, month, onChangeMont
                 <span className="h-1.5 w-1.5 rounded-full bg-canvas-2" />
                 <span>不活跃</span>
               </div>
+              <span className="ml-auto text-ink-4">点击表头日期可查看并修改当天完成情况</span>
             </div>
           </div>
         </div>

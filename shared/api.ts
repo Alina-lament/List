@@ -3,12 +3,15 @@ import type {
   CreateCountdownInput,
   CreateDailyRoutineInput,
   CreateExceptionInput,
+  CreatePomodoroInput,
   CreateTaskInput,
   DailyCompletion,
   DailyRoutine,
   DailyRoutineItem,
   JournalEntry,
   List,
+  PomodoroRecord,
+  PomodoroStats,
   SettingsRow,
   Tag,
   Task,
@@ -87,6 +90,13 @@ export interface Api {
   listSounds(): Promise<string[]>
   getSoundDataUrl(fileName: string): Promise<string>
 
+  // Tomato style
+  getTomatoImagesFolder(): Promise<string>
+  listTomatoImages(): Promise<string[]>
+  openTomatoImagesFolder(): Promise<void>
+  setTomatoImage(filePath: string): Promise<string>
+  getTomatoImageDataUrl(fileName: string): Promise<string>
+
   // Brand
   setBrandImage(filePath: string): Promise<string>
   getBrandDataUrl(): Promise<string | null>
@@ -118,4 +128,13 @@ export interface Api {
   advanceCountdowns(): Promise<void>
   setCountdownBg(id: string, filePath: string): Promise<Countdown>
   getCountdownBgDataUrl(id: string): Promise<string | null>
+
+  // Pomodoro
+  createPomodoroRecord(input: CreatePomodoroInput): Promise<PomodoroRecord>
+  deletePomodoroRecord(id: string): Promise<void>
+  getTodayPomodoroRecords(): Promise<PomodoroRecord[]>
+  getRecentPomodoroRecords(limit?: number): Promise<PomodoroRecord[]>
+  getTotalPomodoroStats(): Promise<{ count: number; totalSeconds: number }>
+  getPomodoroStatsByTaskIds(taskIds: string[]): Promise<Record<string, PomodoroStats>>
+  pomodoroNotify(title: string, body: string): Promise<void>
 }

@@ -21,6 +21,7 @@ import { CalendarView } from '@/features/calendar/components/CalendarView'
 import { DailyView } from '@/features/daily/components/DailyView'
 import { JournalView } from '@/features/journal/components/JournalView'
 import { CountdownView } from '@/features/countdown/components/CountdownView'
+import { PomodoroView } from '@/features/pomodoro/components/PomodoroView'
 import { useTasksStore } from '@/features/tasks/store'
 import { useCalendarStore } from '@/features/calendar/store'
 import { useDailyStore } from '@/features/daily/store'
@@ -241,6 +242,8 @@ export default function App() {
           <DailyView />
         ) : view === 'journal' ? (
           <JournalView />
+        ) : view === 'pomodoro' ? (
+          <PomodoroView />
         ) : (
           <CountdownView />
         )}

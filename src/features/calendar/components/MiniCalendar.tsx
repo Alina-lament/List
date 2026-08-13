@@ -8,7 +8,7 @@ import { useTasksStore } from '@/features/tasks/store'
 import { useSettingsStore } from '@/features/settings/store'
 import { formatMonthTitle, getMonthGrid, gridToWeeks, isCurrentMonth, isToday } from '@/lib/date-utils'
 
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
 const PRIORITY_BG: Record<number, string> = {
   0: 'rgba(241, 245, 249, 0.80)',

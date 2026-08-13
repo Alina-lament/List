@@ -40,17 +40,17 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onE
         borderLeftColor: !isRange || isRangeStart ? instance.list_color : 'transparent',
         backgroundColor: bg,
       }}
-      className={`group flex min-h-[26px] items-center gap-1.5 border-l-[3px] px-2 py-1.5 text-left text-[13px] shadow-xs transition-all duration-150 hover:shadow-card ${
+      className={`group flex min-h-[10px] items-center gap-1 border-l-[3px] px-1.5 py-0.5 text-left text-[10px] shadow-xs transition-all duration-150 hover:shadow-card ${
         isDragging ? 'opacity-30' : ''
       } ${rangeClasses}`}
     >
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none rounded p-0.5 text-ink-4 transition-colors hover:bg-canvas-2/70"
+        className="cursor-grab touch-none rounded p-0.5 text-ink-4 opacity-0 transition-colors hover:bg-canvas-2/70 group-hover:opacity-100"
         aria-label="拖拽改期"
       >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
           <circle cx="5" cy="3" r="1.5" />
           <circle cx="11" cy="3" r="1.5" />
           <circle cx="5" cy="8" r="1.5" />
@@ -66,10 +66,9 @@ export const CalendarTaskBlock = memo(function CalendarTaskBlock({ instance, onE
         } ${!isRange || isRangeStart ? '' : 'invisible'}`}
         title={instance.title}
       >
-        {instance.due_time && !isRange ? `${instance.due_time} ` : ''}
         {instance.title}
       </button>
-      {isRange && instance.due_time && (
+      {instance.due_time && (
         <span className="shrink-0 text-[10px] text-ink-3">{instance.due_time.slice(0, 5)}</span>
       )}
       {(!isRange || isRangeStart) && instance.is_recurring_instance && <RecurrenceIcon />}

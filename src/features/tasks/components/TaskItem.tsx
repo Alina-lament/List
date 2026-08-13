@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { List, Task } from '@shared/types'
 import { todayKey } from '@/lib/date-utils'
 import { ListIcon } from '@/features/lists/components/ListIcon'
+import { useTasksStore } from '../store'
 
 // 优先级三色：现代鲜明色相
 export const PRIORITY_COLORS: Record<number, string> = {
@@ -102,6 +103,7 @@ export const TaskItem = memo(function TaskItem({
   }, [editing])
 
   const completed = Boolean(task.is_completed)
+  const pomodoroStats = useTasksStore((s) => s.taskPomodoroStats[task.id])
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `task:${task.id}`,
     disabled: !sortable || isSubtask || completed || editing,
@@ -252,6 +254,17 @@ export const TaskItem = memo(function TaskItem({
         >
           {isToday ? '今天' : task.due_date.slice(5)}
           {task.due_time ? ` ${task.due_time}` : ''}
+        </span>
+      )}
+      {pomodoroStats && pomodoroStats.count > 0 && (
+        <span
+          className="shrink-0 inline-flex items-center gap-0.5 rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600"
+          title={`番茄 ${pomodoroStats.count} 个，共 ${Math.round(pomodoroStats.totalSeconds / 60)} 分钟`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="10" />
+          </svg>
+          {pomodoroStats.count}
         </span>
       )}
     </div>

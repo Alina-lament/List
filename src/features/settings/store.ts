@@ -34,6 +34,7 @@ export interface SettingsState {
   // 日历
   scrollSensitivity: number
   calendarWeekCount: number
+  calendarShowFullMonth: boolean
   // 任务列表
   taskSortMode: 'free' | 'priority' | 'name'
   // 窗口行为
@@ -43,6 +44,11 @@ export interface SettingsState {
   taskCompleteSoundVolume: number
   taskCompleteSoundFile: string
   taskCompleteSoundUrl: string | null
+  // 番茄样式
+  tomatoImageFile: string | null
+  tomatoImageDataUrl: string | null
+  // 番茄钟
+  pomodoroWorkDuration: number
   // 任务折叠状态
   collapsedParentTasks: Set<string>
   collapsedCompletedSubtasks: Set<string>
@@ -63,11 +69,15 @@ export interface SettingsState {
   setBrandImage(filePath: string): Promise<void>
   clearBrandImage(): Promise<void>
   setCalendarWeekCount(n: number): Promise<void>
+  setCalendarShowFullMonth(value: boolean): Promise<void>
   setTaskSortMode(mode: 'free' | 'priority' | 'name'): Promise<void>
   setTaskCompleteSoundEnabled(enabled: boolean): Promise<void>
   setTaskCompleteSoundVolume(volume: number): Promise<void>
   setTaskCompleteSoundFile(fileName: string): Promise<void>
   loadTaskCompleteSound(fileName?: string): Promise<void>
+  setTomatoImage(fileName: string): Promise<void>
+  clearTomatoImage(): Promise<void>
+  setPomodoroWorkDuration(minutes: number): Promise<void>
   toggleCollapsedParent(taskId: string): Promise<void>
   toggleCollapsedCompleted(taskId: string): Promise<void>
   selectBackupFolder(): Promise<void>
@@ -151,12 +161,16 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   brandImageUrl: null,
   scrollSensitivity: Number(getDefault('scrollSensitivity')) || 200,
   calendarWeekCount: Number(getDefault('calendarWeekCount')) || 4,
+  calendarShowFullMonth: (getDefault('calendarShowFullMonth') ?? '0') === '1',
   taskSortMode: (getDefault('taskSortMode') as 'free' | 'priority' | 'name') || 'free',
   closeBehavior: (getDefault('closeBehavior') as CloseBehavior) || 'ask',
   taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
   taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
   taskCompleteSoundFile: getDefault('taskCompleteSoundFile') || 'complete.wav',
   taskCompleteSoundUrl: null,
+  tomatoImageFile: null,
+  tomatoImageDataUrl: null,
+  pomodoroWorkDuration: parseNum(getDefault('pomodoroWorkDuration'), 25),
   collapsedParentTasks: new Set<string>(),
   collapsedCompletedSubtasks: new Set<string>(),
   backupPath: null,
@@ -191,12 +205,16 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         brandName: map.brandName || getDefault('brandName'),
         scrollSensitivity: Number(map.scrollSensitivity) || 200,
         calendarWeekCount: Number(map.calendarWeekCount) || 4,
+        calendarShowFullMonth: (map.calendarShowFullMonth ?? getDefault('calendarShowFullMonth')) === '1',
         taskSortMode: (map.taskSortMode as 'free' | 'priority' | 'name') || 'free',
         closeBehavior: (map.closeBehavior as CloseBehavior) || 'ask',
         taskCompleteSoundEnabled: (map.taskCompleteSoundEnabled ?? getDefault('taskCompleteSoundEnabled')) === '1',
         taskCompleteSoundVolume: parseNum(map.taskCompleteSoundVolume, parseNum(getDefault('taskCompleteSoundVolume'), 80)),
         taskCompleteSoundFile: map.taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav',
         taskCompleteSoundUrl: await api.getSoundDataUrl(map.taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav'),
+        tomatoImageFile: map.tomatoImageFile || null,
+        tomatoImageDataUrl: map.tomatoImageFile ? await api.getTomatoImageDataUrl(map.tomatoImageFile) : null,
+        pomodoroWorkDuration: parseNum(map.pomodoroWorkDuration, parseNum(getDefault('pomodoroWorkDuration'), 25)),
         collapsedParentTasks: new Set(parseStringArray(map.collapsedParentTasks)),
         collapsedCompletedSubtasks: new Set(parseStringArray(map.collapsedCompletedSubtasks)),
         bgImagePath: await api.getBgImagePath(),
@@ -272,6 +290,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ calendarWeekCount: n })
   },
 
+  async setCalendarShowFullMonth(value) {
+    await api.updateSetting('calendarShowFullMonth', value ? '1' : '0')
+    set({ calendarShowFullMonth: value })
+  },
+
   async setTaskSortMode(mode) {
     await api.updateSetting('taskSortMode', mode)
     set({ taskSortMode: mode })
@@ -299,6 +322,24 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     const name = fileName || get().taskCompleteSoundFile || getDefault('taskCompleteSoundFile') || 'complete.wav'
     const url = await api.getSoundDataUrl(name)
     set({ taskCompleteSoundUrl: url })
+  },
+
+  async setTomatoImage(fileName) {
+    if (!fileName) return
+    await api.updateSetting('tomatoImageFile', fileName)
+    const url = await api.getTomatoImageDataUrl(fileName)
+    set({ tomatoImageFile: fileName, tomatoImageDataUrl: url })
+  },
+
+  async clearTomatoImage() {
+    await api.updateSetting('tomatoImageFile', '')
+    set({ tomatoImageFile: null, tomatoImageDataUrl: null })
+  },
+
+  async setPomodoroWorkDuration(minutes) {
+    const v = Math.max(1, Math.min(180, minutes))
+    await api.updateSetting('pomodoroWorkDuration', String(v))
+    set({ pomodoroWorkDuration: v })
   },
 
   async toggleCollapsedParent(taskId) {
@@ -368,6 +409,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       taskCompleteSoundEnabled: getDefault('taskCompleteSoundEnabled') === '1',
       taskCompleteSoundVolume: parseNum(getDefault('taskCompleteSoundVolume'), 80),
       taskCompleteSoundFile: getDefault('taskCompleteSoundFile') || 'complete.wav',
+      pomodoroWorkDuration: parseNum(getDefault('pomodoroWorkDuration'), 25),
+      calendarShowFullMonth: (getDefault('calendarShowFullMonth') ?? '0') === '1',
       collapsedParentTasks: new Set<string>(),
       collapsedCompletedSubtasks: new Set<string>(),
     })

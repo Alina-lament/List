@@ -11,8 +11,8 @@ import { CalendarCell } from './CalendarCell'
 import { CalendarTaskBlock } from './CalendarTaskBlock'
 import { TaskFormDialog } from '@/features/tasks/components/TaskFormDialog'
 
-const WEEKDAYS_FULL = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
+const WEEKDAYS_FULL = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 
 type DialogState =
   | { mode: 'edit'; task: Task }
@@ -20,27 +20,46 @@ type DialogState =
   | null
 
 export function CalendarView() {
-  const { year, month, weekCount, instancesByDate, loading, shiftMonth, goToday, setWeekCount, fetchMonth } =
-    useCalendarStore()
+  const {
+    year,
+    month,
+    weekCount,
+    startWeekOffset,
+    showFullMonth,
+    instancesByDate,
+    loading,
+    shiftMonth,
+    shiftWeeks,
+    goToday,
+    setWeekCount,
+    setShowFullMonth,
+    fetchMonth,
+  } = useCalendarStore()
   const { selectedListId } = useTasksStore()
-  const { calendarWeekCount, setCalendarWeekCount } = useSettingsStore()
+  const { calendarWeekCount, calendarShowFullMonth, setCalendarWeekCount, setCalendarShowFullMonth } = useSettingsStore()
   const [dialog, setDialog] = useState<DialogState>(null)
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null)
   const wheelAccum = useRef(0)
 
-  // 启动时从设置恢复周数
+  // 启动时从设置恢复周数和整月选项
   useEffect(() => {
     if ([1, 2, 4].includes(calendarWeekCount)) {
       setWeekCount(calendarWeekCount as 1 | 2 | 4)
     }
+    setShowFullMonth(calendarShowFullMonth)
     void fetchMonth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 切换月份时清除周选择
+  // 设置变更时同步到日历本地状态
+  useEffect(() => {
+    setShowFullMonth(calendarShowFullMonth)
+  }, [calendarShowFullMonth, setShowFullMonth])
+
+  // 切换月份或滚动起始周时清除周选择
   useEffect(() => {
     setSelectedWeekStart(null)
-  }, [year, month])
+  }, [year, month, startWeekOffset])
 
   const grid = getMonthGrid(year, month)
   const weeks = gridToWeeks(grid)
@@ -61,13 +80,11 @@ export function CalendarView() {
     w.some((d) => isCurrentMonth(d, year, month)),
   )
 
-  // 找到包含今天的周索引，确保至少显示 weekCount 周
-  const todayKey = new Date().toISOString().slice(0, 10)
-  const todayWeekIdx = visibleWeeks.findIndex((w) => w.includes(todayKey))
-  const rawStart = todayWeekIdx >= 0 ? todayWeekIdx : 0
-  // 从后往前挪，保证至少有 weekCount 周可显示
-  const startIdx = Math.max(0, Math.min(rawStart, visibleWeeks.length - weekCount))
-  const displayWeeks = visibleWeeks.slice(startIdx, startIdx + weekCount)
+  // 整月模式显示全部含当月日期周；否则按起始偏移显示 weekCount 周
+  const startIdx = showFullMonth
+    ? 0
+    : Math.max(0, Math.min(startWeekOffset, visibleWeeks.length - weekCount))
+  const displayWeeks = showFullMonth ? visibleWeeks : visibleWeeks.slice(startIdx, startIdx + weekCount)
 
   // 选中周的 7 天
   const selectedWeekDays = selectedWeekStart
@@ -81,10 +98,10 @@ export function CalendarView() {
     wheelAccum.current += e.deltaY
     const threshold = useSettingsStore.getState().scrollSensitivity
     if (wheelAccum.current >= threshold) {
-      shiftMonth(1)
+      shiftWeeks(showFullMonth ? 1 : weekCount)
       wheelAccum.current = 0
     } else if (wheelAccum.current <= -threshold) {
-      shiftMonth(-1)
+      shiftWeeks(showFullMonth ? -1 : -weekCount)
       wheelAccum.current = 0
     }
   }
@@ -127,10 +144,14 @@ export function CalendarView() {
               onClick={() => {
                 setWeekCount(n)
                 void setCalendarWeekCount(n)
+                if (showFullMonth) {
+                  void setCalendarShowFullMonth(false)
+                  setShowFullMonth(false)
+                }
                 setSelectedWeekStart(null)
               }}
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
-                weekCount === n
+                weekCount === n && !showFullMonth
                   ? 'bg-white text-ink shadow-xs ring-1 ring-ink/5'
                   : 'text-ink-3 hover:text-ink'
               }`}
@@ -138,6 +159,21 @@ export function CalendarView() {
               {n}周
             </button>
           ))}
+          <button
+            onClick={() => {
+              const next = !showFullMonth
+              void setCalendarShowFullMonth(next)
+              setShowFullMonth(next)
+              setSelectedWeekStart(null)
+            }}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${
+              showFullMonth
+                ? 'bg-white text-ink shadow-xs ring-1 ring-ink/5'
+                : 'text-ink-3 hover:text-ink'
+            }`}
+          >
+            整月
+          </button>
         </div>
         {selectedWeekStart && (
           <Button
@@ -164,6 +200,7 @@ export function CalendarView() {
         {/* 按周渲染 */}
         {displayWeeks.map((weekDays) => {
           const isSelected = selectedWeekStart === weekDays[0]
+          const weekNum = getISOWeekNumber(weekDays[0])
           return (
             <div key={weekDays[0]} className="contents">
               {weekDays.map((date) => (
@@ -179,6 +216,8 @@ export function CalendarView() {
                     setSelectedWeekStart(isSelected ? null : weekDays[0])
                   }
                   isWeekSelected={isSelected}
+                  weekNumber={weekNum}
+                  showWeekNumber={date === weekDays[0]}
                 />
               ))}
             </div>

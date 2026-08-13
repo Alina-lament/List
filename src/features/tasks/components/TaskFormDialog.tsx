@@ -77,6 +77,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   const initialRef = useRef<ReturnType<typeof buildPatch> | null>(null)
   const dirtyRef = useRef(false)
   const saveTimerRef = useRef<number | null>(null)
+  const closingRef = useRef(false)
 
   function buildPatch() {
     return {
@@ -151,6 +152,7 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
       initialRef.current = null
     }
     dirtyRef.current = false
+    closingRef.current = false
     setSaveStatus('idle')
     setPanel(null)
     // 只在对话框打开或任务身份变化时重置；避免 taskTags 等外部变化把用户编辑冲掉
@@ -206,8 +208,10 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   }, [title, description, listId, dueDate, dueTime, startDate, endDate, priority, reminder, recurrence, tagIds, task, updateTask])
 
   async function handleSave() {
-    if (!title.trim() || !listId) return
+    if (!title.trim() || !listId || closingRef.current) return
+    closingRef.current = true
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    setSaveStatus('saving')
     if (task) {
       await updateTask(task.id, buildPatch())
     } else {
@@ -217,10 +221,20 @@ export function TaskFormDialog({ open, onClose, task, defaultListId, defaultDueD
   }
 
   async function handleClose() {
+    if (closingRef.current) return
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
-    if (task && dirtyRef.current && title.trim() && listId) {
-      await updateTask(task.id, buildPatch())
-      dirtyRef.current = false
+    if (task) {
+      if (dirtyRef.current && title.trim() && listId) {
+        closingRef.current = true
+        setSaveStatus('saving')
+        await updateTask(task.id, buildPatch())
+        dirtyRef.current = false
+      }
+    } else if (title.trim() && listId) {
+      // 新建模式：只要输入了标题，关闭（点外部/Esc/×）时自动创建任务
+      closingRef.current = true
+      setSaveStatus('saving')
+      await createTask(buildPatch())
     }
     onClose()
   }

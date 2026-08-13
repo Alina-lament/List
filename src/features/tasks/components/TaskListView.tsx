@@ -21,8 +21,8 @@ interface DailyRoutinesSectionProps {
   dailyCompletions: DailyCompletion[]
   dailyExpanded: boolean
   setDailyExpanded: (v: boolean | ((prev: boolean) => boolean)) => void
-  dailyIncrement: (routineId: string, date: string, itemId?: string | null) => Promise<DailyCompletion>
-  dailyDecrement: (routineId: string, date: string, itemId?: string | null) => Promise<DailyCompletion>
+  dailyIncrement: (routineId: string, itemId?: string | null, date?: string) => Promise<void>
+  dailyDecrement: (routineId: string, itemId?: string | null, date?: string) => Promise<void>
 }
 
 function DailyRoutinesSection({
@@ -33,6 +33,7 @@ function DailyRoutinesSection({
   dailyIncrement,
   dailyDecrement,
 }: DailyRoutinesSectionProps) {
+  const today = todayKey()
   const todayDow = new Date().getDay()
   const todaysDaily = dailyRoutines.filter((r) => {
     if (!r.active) return false
@@ -61,8 +62,9 @@ function DailyRoutinesSection({
               key={routine.id}
               routine={routine}
               completions={dailyCompletions}
-              onCheck={(id, itemId) => void dailyIncrement(id, itemId)}
-              onUncheck={(id, itemId) => void dailyDecrement(id, itemId)}
+              date={today}
+              onCheck={(id, itemId) => void dailyIncrement(id, itemId, today)}
+              onUncheck={(id, itemId) => void dailyDecrement(id, itemId, today)}
               onEdit={() => {}}
             />
           ))}
@@ -205,8 +207,9 @@ export function TaskListView() {
   async function handleQuickAdd() {
     const title = quickTitle.trim()
     if (!title) return
-    // 无日期 → 始终待定；有日期 → 选中清单或第一个非待定清单
-    const hasDate = quickDate !== ''
+    // 未指定日期时默认使用今天
+    const dueDate = quickDate || todayKey()
+    const hasDate = dueDate !== ''
     const targetListId = hasDate
       ? (selectedListId ?? lists.find((l) => l.name !== '待定')?.id ?? lists[0]?.id)
       : (pendingListId ?? lists[0]?.id)
@@ -221,7 +224,7 @@ export function TaskListView() {
     await createTask({
       list_id: targetListId,
       title,
-      due_date: quickDate || null,
+      due_date: dueDate,
       due_time: quickTime || null,
       start_date: quickStartDate || null,
       end_date: quickEndDate || null,
@@ -790,16 +793,6 @@ export function TaskListView() {
             </div>
           )}
 
-          {!isTodayView && (
-            <DailyRoutinesSection
-              dailyRoutines={dailyRoutines}
-              dailyCompletions={dailyCompletions}
-              dailyExpanded={dailyExpanded}
-              setDailyExpanded={setDailyExpanded}
-              dailyIncrement={dailyIncrement}
-              dailyDecrement={dailyDecrement}
-            />
-          )}
         </div>
       </div>
 

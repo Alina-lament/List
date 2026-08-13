@@ -1,10 +1,11 @@
 import { memo, useMemo } from 'react'
+import dayjs from 'dayjs'
 import type { DailyCompletion, DailyRoutine } from '@shared/types'
-import { todayKey } from '@/lib/date-utils'
 
 interface Props {
   routine: DailyRoutine
-  completions: DailyCompletion[]  // 今天的全部完成记录
+  completions: DailyCompletion[]  // 全部已加载的完成记录（含多个日期）
+  date: string                    // 要展示/打卡的日期 YYYY-MM-DD
   onCheck: (routineId: string, itemId?: string | null) => void
   onUncheck: (routineId: string, itemId?: string | null) => void
   onEdit: (routine: DailyRoutine) => void
@@ -46,15 +47,15 @@ function CheckRow({
   return <div className="flex shrink-0 flex-wrap gap-1.5">{boxes}</div>
 }
 
-export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions, onCheck, onUncheck, onEdit }: Props) {
+export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions, date, onCheck, onUncheck, onEdit }: Props) {
   const hasItems = routine.items.length > 0
 
-  const activeToday = useMemo(() => {
+  const activeOnDate = useMemo(() => {
     if (!routine.active) return false
     const days = JSON.parse(routine.days_of_week || '[]') as number[]
     if (days.length === 0) return true
-    return days.includes(new Date().getDay())
-  }, [routine.active, routine.days_of_week])
+    return days.includes(dayjs(date).day())
+  }, [routine.active, routine.days_of_week, date])
 
   // 周几标签
   const dayLabels = useMemo(() => {
@@ -64,13 +65,11 @@ export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions,
     return '周' + days.map((d: number) => names[d]).join('')
   }, [routine.days_of_week])
 
-  const today = todayKey()
-
-  // 获取某个 item 在今天的完成计数
+  // 获取某个 item 在指定日期的完成计数
   function itemCount(itemId?: string | null) {
     return completions.find((c) =>
       c.routine_id === routine.id &&
-      c.date === today &&
+      c.date === date &&
       (itemId ? c.item_id === itemId : !c.item_id),
     )?.count ?? 0
   }
@@ -82,14 +81,15 @@ export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions,
       return routine.items.every((it) => itemCount(it.id) >= it.target_count)
     }
     return itemCount() >= routine.target_count
-  }, [routine, completions])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routine, completions, date])
 
   return (
     <div
       onClick={() => onEdit(routine)}
       className={`group cursor-pointer rounded-xl border px-4 py-3.5 transition-all duration-150 hover:shadow-card ${
         allDone ? 'border-emerald-200 bg-emerald-50/50'
-          : !activeToday ? 'border-canvas-3 bg-canvas-2 opacity-60'
+          : !activeOnDate ? 'border-canvas-3 bg-canvas-2 opacity-60'
           : 'border-transparent bg-white hover:border-canvas-3'
       }`}
     >
@@ -98,7 +98,7 @@ export const DailyTaskCard = memo(function DailyTaskCard({ routine, completions,
         <h3 className={`truncate text-sm font-semibold ${allDone ? 'text-emerald-700' : 'text-ink'}`}>
           {routine.title}
         </h3>
-        <span className={`shrink-0 text-[10px] ${activeToday ? 'text-ink-3' : 'text-ink-4'}`}>
+        <span className={`shrink-0 text-[10px] ${activeOnDate ? 'text-ink-3' : 'text-ink-4'}`}>
           {dayLabels}
         </span>
       </div>

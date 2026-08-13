@@ -6,6 +6,7 @@ import { createTray, destroyTray } from './tray'
 import { initDatabase } from './db'
 import { createCountdownRepository } from './db/repositories/countdownRepo'
 import { createDailyRepository } from './db/repositories/dailyRepo'
+import { createPomodoroRepository } from './db/repositories/pomodoroRepo'
 import { createJournalRepository } from './db/repositories/journalRepo'
 import { createListRepository } from './db/repositories/listRepo'
 import { createTagRepository } from './db/repositories/tagRepo'
@@ -133,6 +134,7 @@ app.whenReady().then(() => {
   ensureDir(join(dataRoot, 'backgrounds'))
   ensureDir(join(dataRoot, 'brand'))
   ensureDir(join(dataRoot, 'countdowns'))
+  ensureDir(join(dataRoot, 'tomatoes'))
   ensureDefaultSounds(dataRoot)
 
   const dbPath = join(dataRoot, 'db', 'younglife.db')
@@ -146,6 +148,7 @@ app.whenReady().then(() => {
   const daily = createDailyRepository(db)
   const journal = createJournalRepository(db)
   const countdowns = createCountdownRepository(db)
+  const pomodoro = createPomodoroRepository(db)
 
   // 如果用户已设置备份路径，启动时初始化并执行一次全量同步
   const backupPathSetting = settings.get('backupPath')
@@ -155,7 +158,7 @@ app.whenReady().then(() => {
     })
   }
 
-  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, countdowns, dataRoot, backupService })
+  registerIpcHandlers({ tasks, lists, tags, settings, daily, journal, countdowns, pomodoro, dataRoot, backupService })
   startReminderScheduler(tasks)
 
   // 迁移后修正图标路径（从旧安装目录 → 新 userData 目录）

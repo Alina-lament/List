@@ -49,3 +49,19 @@ input[type='date'],
 input[type='time'] {
   color-scheme: light;
 }
+
+@keyframes tomato-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+.tomato-pop {
+  animation: tomato-pop 0.55s ease-out both;
+}

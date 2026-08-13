@@ -56,6 +56,13 @@ export const IpcChannels = {
   soundsList: 'sounds:list',
   soundsGetDataUrl: 'sounds:getDataUrl',
 
+  // tomato style
+  tomatoesGetFolder: 'tomatoes:getFolder',
+  tomatoesList: 'tomatoes:list',
+  tomatoesOpenFolder: 'tomatoes:openFolder',
+  tomatoesSetImage: 'tomatoes:setImage',
+  tomatoesGetDataUrl: 'tomatoes:getDataUrl',
+
   // brand
   brandSetImage: 'brand:setImage',
   brandGetDataUrl: 'brand:getDataUrl',
@@ -87,6 +94,15 @@ export const IpcChannels = {
   countdownAdvance: 'countdown:advance',
   countdownSetBg: 'countdown:setBg',
   countdownGetBgDataUrl: 'countdown:getBgDataUrl',
+
+  // pomodoro
+  pomodoroCreateRecord: 'pomodoro:createRecord',
+  pomodoroDeleteRecord: 'pomodoro:deleteRecord',
+  pomodoroGetTodayRecords: 'pomodoro:getTodayRecords',
+  pomodoroGetRecentRecords: 'pomodoro:getRecentRecords',
+  pomodoroGetTotalStats: 'pomodoro:getTotalStats',
+  pomodoroGetStatsByTaskIds: 'pomodoro:getStatsByTaskIds',
+  pomodoroNotify: 'pomodoro:notify',
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]

@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, Notification, shell } from 'electron'
 import { IpcChannels } from '@shared/ipc'
-import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
+import type { Countdown, CreateCountdownInput, CreateDailyRoutineInput, CreateExceptionInput, CreatePomodoroInput, CreateTaskInput, UpdateCountdownInput, UpdateDailyRoutineInput, UpdateTaskInput } from '@shared/types'
 import type { CountdownRepository } from '../db/repositories/countdownRepo'
 import type { DailyRepository } from '../db/repositories/dailyRepo'
 import type { JournalRepository } from '../db/repositories/journalRepo'
 import type { ListRepository } from '../db/repositories/listRepo'
+import type { PomodoroRepository } from '../db/repositories/pomodoroRepo'
 import type { TagRepository } from '../db/repositories/tagRepo'
 import type { TaskRepository } from '../db/repositories/taskRepo'
 import type { SettingsRepository } from '../db/repositories/settingsRepo'
@@ -22,6 +23,7 @@ export interface Repositories {
   daily: DailyRepository
   journal: JournalRepository
   countdowns: CountdownRepository
+  pomodoro: PomodoroRepository
   dataRoot: string
   backupService: BackupService
 }
@@ -31,7 +33,7 @@ function ensureDir(dir: string): void {
 }
 
 export function registerIpcHandlers(repos: Repositories): void {
-  const { tasks, lists, tags, settings, daily, journal, countdowns, dataRoot, backupService } = repos
+  const { tasks, lists, tags, settings, daily, journal, countdowns, pomodoro, dataRoot, backupService } = repos
 
   ipcMain.handle(IpcChannels.tasksGetByDateRange, (_e, start: string, end: string) =>
     tasks.getByDateRange(start, end),
@@ -335,6 +337,49 @@ export function registerIpcHandlers(repos: Repositories): void {
     return url ?? ''
   })
 
+  // ── Tomato style images ──
+  const tomatoDir = join(dataRoot, 'tomatoes')
+
+  ipcMain.handle(IpcChannels.tomatoesGetFolder, () => {
+    ensureDir(tomatoDir)
+    return tomatoDir
+  })
+  ipcMain.handle(IpcChannels.tomatoesList, () => {
+    ensureDir(tomatoDir)
+    return readdirSync(tomatoDir).filter((f) =>
+      /\.(png|jpg|jpeg|webp|gif|bmp|svg)$/i.test(f),
+    )
+  })
+  ipcMain.handle(IpcChannels.tomatoesOpenFolder, () => {
+    ensureDir(tomatoDir)
+    return shell.openPath(tomatoDir)
+  })
+  ipcMain.handle(IpcChannels.tomatoesSetImage, (_e, filePath: string) => {
+    ensureDir(tomatoDir)
+    const ext = extname(filePath).toLowerCase() || '.png'
+    const base = filePath.split(/[\\/]/).pop()?.replace(/\.\w+$/, '') || 'tomato'
+    const safeName = base.replace(/[^\w\u4e00-\u9fa5-]+/g, '-') || 'tomato'
+    let destName = `${safeName}${ext}`
+    let counter = 1
+    while (existsSync(join(tomatoDir, destName))) {
+      destName = `${safeName}-${counter}${ext}`
+      counter += 1
+    }
+    copyFileSync(filePath, join(tomatoDir, destName))
+    void backupService.syncDir('tomatoes').catch((err) => {
+      console.error('[backup] tomatoesSetImage sync failed:', err)
+    })
+    return destName
+  })
+  ipcMain.handle(IpcChannels.tomatoesGetDataUrl, (_e, fileName: string) => {
+    const filePath = join(tomatoDir, fileName)
+    if (!existsSync(filePath)) return ''
+    const buf = readFileSync(filePath)
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? 'png'
+    const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+    return `data:${mime};base64,${buf.toString('base64')}`
+  })
+
   // ── Countdowns ──
   const countdownBgDir = join(dataRoot, 'countdowns')
 
@@ -383,5 +428,22 @@ export function registerIpcHandlers(repos: Repositories): void {
     const ext = c.bg_image_path.split('.').pop()?.toLowerCase() ?? 'jpg'
     const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
     return `data:${mime};base64,${buf.toString('base64')}`
+  })
+
+  // ── Pomodoro ──
+  ipcMain.handle(IpcChannels.pomodoroCreateRecord, (_e, input: CreatePomodoroInput) =>
+    pomodoro.create(input),
+  )
+  ipcMain.handle(IpcChannels.pomodoroDeleteRecord, (_e, id: string) => pomodoro.remove(id))
+  ipcMain.handle(IpcChannels.pomodoroGetTodayRecords, () => pomodoro.getTodayRecords())
+  ipcMain.handle(IpcChannels.pomodoroGetRecentRecords, (_e, limit?: number) =>
+    pomodoro.getRecentRecords(limit),
+  )
+  ipcMain.handle(IpcChannels.pomodoroGetTotalStats, () => pomodoro.getTotalStats())
+  ipcMain.handle(IpcChannels.pomodoroGetStatsByTaskIds, (_e, taskIds: string[]) =>
+    pomodoro.getStatsByTaskIds(taskIds),
+  )
+  ipcMain.handle(IpcChannels.pomodoroNotify, (_e, title: string, body: string) => {
+    new Notification({ title, body, sound: true }).show()
   })
 }

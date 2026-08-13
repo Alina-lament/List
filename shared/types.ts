@@ -227,6 +227,28 @@ export interface UpdateCountdownInput {
   interval_days?: number | null
 }
 
+// ── Pomodoro ──
+export interface PomodoroRecord {
+  id: string
+  task_id: string | null
+  duration_seconds: number
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+export interface CreatePomodoroInput {
+  task_id?: string | null
+  duration_seconds: number
+  started_at?: string | null
+  completed_at?: string | null
+}
+
+export interface PomodoroStats {
+  count: number
+  totalSeconds: number
+}
+
 export const DEFAULT_SETTINGS: Record<string, string> = {
   sidebarBg: '#f4f5f7',
   canvasBg: '#fdfdfc',
@@ -254,12 +276,15 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   detailWidth: '384',
   scrollSensitivity: '200',
   calendarWeekCount: '4',
+  calendarShowFullMonth: '0',
   closeBehavior: 'ask',
   taskSortMode: 'free',
   taskCompleteSoundEnabled: '1',
   taskCompleteSoundVolume: '80',
   taskCompleteSoundFile: 'complete.wav',
+  tomatoImageFile: '',
   collapsedParentTasks: '[]',
   collapsedCompletedSubtasks: '[]',
+  pomodoroWorkDuration: '25',
   backupPath: '',
 }

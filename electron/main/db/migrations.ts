@@ -229,6 +229,22 @@ const MIGRATIONS: { version: number; sql: string }[] = [
       CREATE INDEX idx_daily_completions_item_date ON daily_completions(item_id, date);
     `,
   },
+  {
+    version: 10,
+    sql: `
+      CREATE TABLE pomodoro_records (
+        id               TEXT PRIMARY KEY,
+        task_id          TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+        duration_seconds INTEGER NOT NULL,
+        started_at       TEXT,
+        completed_at     TEXT,
+        created_at       TEXT NOT NULL
+      );
+
+      CREATE INDEX idx_pomodoro_records_task_id ON pomodoro_records(task_id);
+      CREATE INDEX idx_pomodoro_records_completed_at ON pomodoro_records(completed_at);
+    `,
+  },
 ]
 
 export function runMigrations(db: AppDatabase): void {
