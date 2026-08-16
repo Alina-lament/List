@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import dayjs from 'dayjs'
 import type { DailyCompletion, DailyRoutine } from '@shared/types'
 
@@ -47,11 +48,25 @@ export function DailyCalendar({ routines, completions, year, month, selectedDate
   const first = dayjs(`${year}-${String(month).padStart(2, '0')}-01`)
   const daysInMonth = first.daysInMonth()
   const today = dayjs().format('YYYY-MM-DD')
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const dates: string[] = []
   for (let d = 1; d <= daysInMonth; d++) {
     dates.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
   }
+
+  // 打开或切换月份时，将「今天」（非本月则为月中日期）滚动到可视区正中间
+  useEffect(() => {
+    const container = scrollRef.current
+    if (!container) return
+    const anchor = dates.includes(today) ? today : dates[Math.floor(dates.length / 2)]
+    const cell = container.querySelector<HTMLElement>(`[data-date="${anchor}"]`)
+    if (!cell) return
+    const cRect = container.getBoundingClientRect()
+    const eRect = cell.getBoundingClientRect()
+    // scrollLeft 增大时内容左移，因此需加上「单元格中心 − 容器中心」的偏移
+    container.scrollLeft += eRect.left + eRect.width / 2 - (cRect.left + cRect.width / 2)
+  }, [year, month])
 
   return (
     <div className="rounded-2xl border border-canvas-3 bg-white p-5 shadow-card">
@@ -94,7 +109,7 @@ export function DailyCalendar({ routines, completions, year, month, selectedDate
       {routines.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink-4">暂无每日任务</p>
       ) : (
-        <div className="overflow-x-auto pb-2">
+        <div ref={scrollRef} className="overflow-x-auto pb-2">
           <div className="min-w-[900px]">
             {/* 日期表头 */}
             <div
@@ -110,6 +125,7 @@ export function DailyCalendar({ routines, completions, year, month, selectedDate
                 return (
                   <div
                     key={date}
+                    data-date={date}
                     className={`flex flex-col items-center justify-center gap-1 py-1 text-xs ${
                       isToday || isSelected ? 'font-bold text-royal' : 'text-ink-3'
                     }`}

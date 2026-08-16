@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTasksStore, type ViewMode } from '@/features/tasks/store'
 import { useSettingsStore } from '@/features/settings/store'
 import { ColorPicker } from '@/components/ui/ColorPicker'
@@ -100,7 +101,7 @@ export function Sidebar() {
   const [newTagName, setNewTagName] = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [listsExpanded, setListsExpanded] = useState(true)
-  const [iconPickerId, setIconPickerId] = useState<string | null>(null)
+  const [iconPicker, setIconPicker] = useState<{ listId: string; x: number; y: number } | null>(null)
   const sidebarWidth = useLayoutStore((s) => s.sidebarWidth)
   const showDetailCalendar = useLayoutStore((s) => s.showDetailCalendar)
   const setShowDetailCalendar = useLayoutStore((s) => s.setShowDetailCalendar)
@@ -236,7 +237,7 @@ export function Sidebar() {
 
       <div className="mx-5 mt-3 h-px bg-canvas-3/40" />
 
-      <div className="flex-1 overflow-y-auto px-3 py-3">
+      <div className="flex-1 overflow-y-auto px-3 py-3" onScroll={() => { if (iconPicker) setIconPicker(null) }}>
         <div
           className="mb-2 flex cursor-pointer items-center justify-between rounded-lg px-2 py-1 transition-colors hover:bg-white/40"
           onClick={() => setListsExpanded((v) => !v)}
@@ -273,7 +274,6 @@ export function Sidebar() {
             </button>
             {lists.map((list) => {
               const selected = list.id === selectedListId
-              const showPicker = iconPickerId === list.id
               return (
                 <div
                   key={list.id}
@@ -285,16 +285,19 @@ export function Sidebar() {
                 >
                   <button
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-canvas-2"
-                    onClick={(e) => { e.stopPropagation(); setIconPickerId(showPicker ? null : list.id) }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (iconPicker?.listId === list.id) {
+                        setIconPicker(null)
+                        return
+                      }
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                      setIconPicker({ listId: list.id, x: rect.right + 6, y: rect.top })
+                    }}
                     title="点击更换图标"
                   >
                     <ListIcon list={list} size={16} />
                   </button>
-                  {showPicker && (
-                    <div className="absolute left-8 top-8 z-30">
-                      <ListIconPicker listId={list.id} onClose={() => setIconPickerId(null)} />
-                    </div>
-                  )}
                   {renamingId === list.id ? (
                     <input
                       autoFocus
@@ -478,6 +481,16 @@ export function Sidebar() {
             </button>
           </div>
         </>
+      )}
+
+      {/* 选择清单图标弹窗：挂载到 body，避免被侧边栏滚动容器裁剪或遮挡 */}
+      {iconPicker && createPortal(
+        <ListIconPicker
+          listId={iconPicker.listId}
+          anchor={{ x: iconPicker.x, y: iconPicker.y }}
+          onClose={() => setIconPicker(null)}
+        />,
+        document.body
       )}
 
       <SettingsDialog

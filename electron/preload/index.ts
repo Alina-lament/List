@@ -29,6 +29,7 @@ const api: Api = {
   setListIcon: (listId, filePath) => ipcRenderer.invoke(IpcChannels.listsSetIcon, listId, filePath),
   getListIconDataUrl: (listId) => ipcRenderer.invoke(IpcChannels.listsGetIconDataUrl, listId),
   listBuiltinIcons: () => ipcRenderer.invoke(IpcChannels.listsListBuiltinIcons),
+  listCustomIcons: () => ipcRenderer.invoke(IpcChannels.listsListCustomIcons),
 
   getTags: () => ipcRenderer.invoke(IpcChannels.tagsGetAll),
   getAllTaskTags: () => ipcRenderer.invoke(IpcChannels.tagsGetAllTaskTags),
@@ -40,6 +41,7 @@ const api: Api = {
 
   // Settings
   getAllSettings: () => ipcRenderer.invoke(IpcChannels.settingsGetAll),
+  getSetting: (key) => ipcRenderer.invoke(IpcChannels.settingsGet, key),
   updateSetting: (key, value) => ipcRenderer.invoke(IpcChannels.settingsUpdate, key, value),
 
   // Backup

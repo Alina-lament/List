@@ -220,11 +220,11 @@ export const TaskItem = memo(function TaskItem({
           />
         ) : (
           <span
-            onClick={(e) => {
+            onDoubleClick={(e) => {
               e.stopPropagation()
               setSelfEditing(true)
             }}
-            onDoubleClick={(e) => e.stopPropagation()}
+            title="双击修改标题"
             className={`truncate text-left ${isSubtask ? 'text-[13px]' : 'text-sm'} ${
               completed ? 'text-ink-4 line-through' : task.title ? 'text-ink' : 'italic text-ink-4'
             }`}

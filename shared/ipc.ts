@@ -17,6 +17,7 @@ export const IpcChannels = {
   listsSetIcon: 'lists:setIcon',
   listsGetIconDataUrl: 'lists:getIconDataUrl',
   listsListBuiltinIcons: 'lists:listBuiltinIcons',
+  listsListCustomIcons: 'lists:listCustomIcons',
   tagsGetAll: 'tags:getAll',
   tagsGetAllTaskTags: 'tags:getAllTaskTags',
   tagsCreate: 'tags:create',
@@ -27,6 +28,7 @@ export const IpcChannels = {
 
   // settings
   settingsGetAll: 'settings:getAll',
+  settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
 
   // backup

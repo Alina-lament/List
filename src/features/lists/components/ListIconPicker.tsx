@@ -1,24 +1,70 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { useTasksStore } from '@/features/tasks/store'
 
 export interface ListIconPickerProps {
   listId: string
   onClose: () => void
+  /** 锚点（触发按钮的视口坐标）。传入时弹窗以 fixed 定位，并自动收拢在视口内 */
+  anchor?: { x: number; y: number }
 }
 
-export function ListIconPicker({ listId, onClose }: ListIconPickerProps) {
-  const { setListIconFromBuiltin, updateListIcon, clearListIcon } = useTasksStore()
+const VIEWPORT_MARGIN = 8
+
+/** 内置图标文件名（不含扩展名）→ 中文名；未命中的回退为文件名 */
+const ICON_LABELS: Record<string, string> = {
+  anniversary: '纪念日',
+  archive: '归档',
+  birthday: '生日',
+  box: '收纳',
+  'edit-3': '编辑',
+  entertainment: '娱乐',
+  finance: '财务',
+  health: '健康',
+  home: '家庭',
+  reading: '阅读',
+  repeat: '重复',
+  runner: '跑步',
+  shopping: '购物',
+  study: '学习',
+  target: '目标',
+  travel: '旅行',
+  work: '工作',
+  workout: '锻炼',
+}
+
+function iconLabel(fileName: string): string {
+  const key = fileName.replace(/\.[^.]+$/, '')
+  return ICON_LABELS[key] ?? key
+}
+
+export function ListIconPicker({ listId, onClose, anchor }: ListIconPickerProps) {
+  const { setListIconFromBuiltin, setListIconFromCustom, updateListIcon, clearListIcon } = useTasksStore()
   const [builtins, setBuiltins] = useState<{ name: string; content: string }[]>([])
+  const [customs, setCustoms] = useState<{ name: string; dataUrl: string }[]>([])
   const [loading, setLoading] = useState(true)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(anchor ?? null)
+
+  // 弹窗尺寸随内容变化（如图标加载完成），每次渲染后按视口校准位置
+  useLayoutEffect(() => {
+    if (!anchor) return
+    const el = wrapperRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setPos({
+      x: Math.min(anchor.x, Math.max(VIEWPORT_MARGIN, window.innerWidth - rect.width - VIEWPORT_MARGIN)),
+      y: Math.min(anchor.y, Math.max(VIEWPORT_MARGIN, window.innerHeight - rect.height - VIEWPORT_MARGIN)),
+    })
+  }, [anchor, loading, builtins.length, customs.length])
 
   useEffect(() => {
     let mounted = true
-    api.listBuiltinIcons()
-      .then((icons) => {
+    Promise.all([api.listBuiltinIcons(), api.listCustomIcons()])
+      .then(([builtinIcons, customIcons]) => {
         if (mounted) {
-          setBuiltins(icons)
+          setBuiltins(builtinIcons)
+          setCustoms(customIcons)
           setLoading(false)
         }
       })
@@ -56,6 +102,11 @@ export function ListIconPicker({ listId, onClose }: ListIconPickerProps) {
     onClose()
   }
 
+  async function handleSelectCustom(fileName: string) {
+    await setListIconFromCustom(listId, fileName)
+    onClose()
+  }
+
   async function handleClear() {
     await clearListIcon(listId)
     onClose()
@@ -64,24 +115,52 @@ export function ListIconPicker({ listId, onClose }: ListIconPickerProps) {
   return (
     <div
       ref={wrapperRef}
-      className="w-44 rounded-xl border border-canvas-3 bg-white p-2.5 shadow-card-xl"
+      className={`${anchor ? 'fixed z-50' : 'absolute'} w-52 rounded-xl border border-canvas-3 bg-white p-2.5 shadow-card-xl`}
+      style={anchor && pos ? { left: pos.x, top: pos.y } : undefined}
     >
       <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">选择图标</p>
       {loading ? (
         <div className="py-3 text-center text-xs text-ink-4">加载中…</div>
-      ) : builtins.length === 0 ? (
-        <div className="py-3 text-center text-xs text-ink-4">暂无内置图标</div>
       ) : (
-        <div className="grid grid-cols-5 gap-1">
-          {builtins.map((b) => (
-            <button
-              key={b.name}
-              onClick={() => void handleSelect(b.name)}
-              title={b.name}
-              className="flex h-7 w-7 items-center justify-center rounded-md text-ink-2 transition-colors hover:bg-canvas-2"
-              dangerouslySetInnerHTML={{ __html: b.content }}
-            />
-          ))}
+        <div className="max-h-[60vh] overflow-y-auto pr-0.5">
+          {customs.length > 0 && (
+            <div className="mb-2">
+              <p className="mb-1 text-[10px] font-medium text-ink-3">我的图标</p>
+              <div className="grid grid-cols-4 gap-1">
+                {customs.map((b) => (
+                  <button
+                    key={b.name}
+                    onClick={() => void handleSelectCustom(b.name)}
+                    title={b.name}
+                    className="flex flex-col items-center gap-1 rounded-md px-0.5 py-1.5 text-ink-2 transition-colors hover:bg-canvas-2"
+                  >
+                    <img src={b.dataUrl} alt={b.name} className="h-6 w-6 object-contain" />
+                    <span className="w-full truncate text-center text-[9px] leading-none text-ink-3">
+                      {b.name.replace(/\.[^.]+$/, '')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="mb-1 text-[10px] font-medium text-ink-3">内置图标</p>
+          {builtins.length === 0 ? (
+            <div className="py-3 text-center text-xs text-ink-4">暂无内置图标</div>
+          ) : (
+            <div className="grid grid-cols-4 gap-1">
+              {builtins.map((b) => (
+                <button
+                  key={b.name}
+                  onClick={() => void handleSelect(b.name)}
+                  title={iconLabel(b.name)}
+                  className="flex flex-col items-center gap-1 rounded-md px-0.5 py-1.5 text-ink-2 transition-colors hover:bg-canvas-2"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" dangerouslySetInnerHTML={{ __html: b.content }} />
+                  <span className="w-full truncate text-center text-[9px] leading-none text-ink-3">{iconLabel(b.name)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div className="mt-2 flex items-center gap-1.5 border-t border-canvas-3 pt-2">

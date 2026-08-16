@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { List, Task } from '@shared/types'
 import { useTasksStore } from '../store'
@@ -13,6 +13,7 @@ import { useDailyStore } from '@/features/daily/store'
 import { DailyTaskCard } from '@/features/daily/components/DailyTaskCard'
 import { useSettingsStore } from '@/features/settings/store'
 import { MiniCalendar } from '@/features/calendar/components/MiniCalendar'
+import { ListIcon } from '@/features/lists/components/ListIcon'
 import dayjs from 'dayjs'
 import type { DailyCompletion, DailyRoutine } from '@shared/types'
 
@@ -94,7 +95,9 @@ export function TaskListView() {
   const [quickStartDate, setQuickStartDate] = useState('')
   const [quickEndDate, setQuickEndDate] = useState('')
   const [quickPriority, setQuickPriority] = useState<0 | 1 | 2 | 3>(0)
-  const [quickPanel, setQuickPanel] = useState<'date' | 'priority' | null>(null)
+  // 显式指定的目标清单；null 表示按默认规则（有日期→当前清单，无日期→待定清单）
+  const [quickListId, setQuickListId] = useState<string | null>(null)
+  const [quickPanel, setQuickPanel] = useState<'date' | 'priority' | 'list' | null>(null)
   const [timePanel, setTimePanel] = useState<'hour' | 'min' | null>(null)
   const [priorityFilterOpen, setPriorityFilterOpen] = useState(false)
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
@@ -104,6 +107,7 @@ export function TaskListView() {
   const [inlineEditTaskId, setInlineEditTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const [dailyExpanded, setDailyExpanded] = useState(true)
+  const [overdueExpanded, setOverdueExpanded] = useState(true)
   const [priorityFilter, setPriorityFilter] = useState<-1 | 0 | 1 | 2 | 3>(-1)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -204,15 +208,23 @@ export function TaskListView() {
     [lists],
   )
 
+  // 切换侧边栏清单后，取消快速添加中显式指定的清单
+  useEffect(() => {
+    setQuickListId(null)
+  }, [selectedListId])
+
+  const quickList = quickListId ? (lists.find((l) => l.id === quickListId) ?? null) : null
+
   async function handleQuickAdd() {
     const title = quickTitle.trim()
     if (!title) return
     // 未指定日期时默认使用今天
     const dueDate = quickDate || todayKey()
     const hasDate = dueDate !== ''
-    const targetListId = hasDate
-      ? (selectedListId ?? lists.find((l) => l.name !== '待定')?.id ?? lists[0]?.id)
-      : (pendingListId ?? lists[0]?.id)
+    const targetListId = quickListId
+      ?? (hasDate
+        ? (selectedListId ?? lists.find((l) => l.name !== '待定')?.id ?? lists[0]?.id)
+        : (pendingListId ?? lists[0]?.id))
     if (!targetListId) return
     setQuickTitle('')
     setQuickDate('')
@@ -572,6 +584,56 @@ export function TaskListView() {
                   </div>
                 )}
               </div>
+
+              {/* 类型清单按钮 */}
+              <div className="relative">
+                <button
+                  onClick={() => setQuickPanel(quickPanel === 'list' ? null : 'list')}
+                  aria-label="设置类型清单"
+                  className={`flex max-w-[130px] items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] transition-colors hover:bg-white/80 ${
+                    quickList ? 'text-royal font-medium' : 'text-ink-3'
+                  }`}
+                >
+                  {quickList ? (
+                    <>
+                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                        <ListIcon list={quickList} size={14} />
+                      </span>
+                      <span className="truncate">{quickList.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                        <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+                      </svg>
+                      清单
+                    </>
+                  )}
+                </button>
+                {quickPanel === 'list' && (
+                  <div className="absolute left-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-canvas-3 bg-white py-1 shadow-card-xl">
+                    {lists.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => { setQuickListId(quickListId === l.id ? null : l.id); setQuickPanel(null) }}
+                        className={`flex w-full items-center gap-2 px-3 py-1.5 text-[13px] transition-colors hover:bg-canvas-2 ${
+                          quickListId === l.id ? 'font-medium text-royal' : 'text-ink-2'
+                        }`}
+                      >
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                          <ListIcon list={l} size={14} />
+                        </span>
+                        <span className="truncate">{l.name}</span>
+                        {quickListId === l.id && (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto shrink-0 text-royal">
+                            <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -721,14 +783,20 @@ export function TaskListView() {
                   {/* 过期未完成 */}
                   {overdueActive.length > 0 && (
                     <div className="mb-4">
-                      <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-prihigh">
+                      <button
+                        onClick={() => setOverdueExpanded((v) => !v)}
+                        className="mb-2 flex w-full items-center gap-1.5 text-left text-[11px] font-semibold tracking-wide text-prihigh transition-colors hover:text-ink"
+                      >
+                        <span className={`inline-block transition-transform ${overdueExpanded ? 'rotate-90' : ''}`}>▸</span>
                         过期未完成 · {overdueActive.length}
-                      </h3>
-                      <SortableContext items={overdueActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">
-                          {overdueActive.map((task) => renderTaskWithSubtasks(task, { variant: 'overdue' }))}
-                        </div>
-                      </SortableContext>
+                      </button>
+                      {overdueExpanded && (
+                        <SortableContext items={overdueActive.map((t) => `task:${t.id}`)} strategy={verticalListSortingStrategy}>
+                          <div className="space-y-2">
+                            {overdueActive.map((task) => renderTaskWithSubtasks(task, { variant: 'overdue' }))}
+                          </div>
+                        </SortableContext>
+                      )}
                     </div>
                   )}
 

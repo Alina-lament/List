@@ -29,6 +29,7 @@ interface TasksState {
   renameList(id: string, name: string): Promise<void>
   updateListIcon(id: string, filePath: string): Promise<void>
   setListIconFromBuiltin(id: string, fileName: string): Promise<void>
+  setListIconFromCustom(id: string, fileName: string): Promise<void>
   clearListIcon(id: string): Promise<void>
   deleteList(id: string): Promise<void>
 
@@ -180,6 +181,11 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   async setListIconFromBuiltin(id, fileName) {
     const updated = await api.updateList(id, { icon: `builtin:${fileName}` })
+    set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
+  },
+
+  async setListIconFromCustom(id, fileName) {
+    const updated = await api.updateList(id, { icon: `custom:${fileName}` })
     set((s) => ({ lists: s.lists.map((l) => (l.id === id ? updated : l)) }))
   },
 

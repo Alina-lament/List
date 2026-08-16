@@ -51,6 +51,7 @@ export interface Api {
   setListIcon(listId: string, filePath: string): Promise<string>
   getListIconDataUrl(listId: string): Promise<string | null>
   listBuiltinIcons(): Promise<{ name: string; content: string }[]>
+  listCustomIcons(): Promise<{ name: string; dataUrl: string }[]>
 
   getTags(): Promise<Tag[]>
   getAllTaskTags(): Promise<TaskTag[]>
@@ -61,6 +62,7 @@ export interface Api {
 
   // Settings
   getAllSettings(): Promise<SettingsRow[]>
+  getSetting(key: string): Promise<string | null>
   updateSetting(key: string, value: string): Promise<SettingsRow>
 
   // Backup

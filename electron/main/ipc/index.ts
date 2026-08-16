@@ -127,9 +127,38 @@ export function registerIpcHandlers(repos: Repositories): void {
 
   ipcMain.handle(IpcChannels.listsListBuiltinIcons, () => {
     if (!existsSync(builtinIconsDir)) return []
-    return readdirSync(builtinIconsDir)
-      .filter((f) => /\.(svg|png|jpg|jpeg|webp|gif)$/i.test(f))
-      .map((f) => ({ name: f, content: readFileSync(join(builtinIconsDir, f), 'utf-8') }))
+    // 只接受 SVG 文本内容，避免目录中混入的二进制图片被内联渲染导致乱码
+    const icons: { name: string; content: string }[] = []
+    for (const f of readdirSync(builtinIconsDir)) {
+      if (!/\.svg$/i.test(f)) continue
+      try {
+        const content = readFileSync(join(builtinIconsDir, f), 'utf-8')
+        if (!content.trimStart().startsWith('<')) continue
+        icons.push({ name: f, content })
+      } catch (err) {
+        console.error(`[lists] 读取内置图标失败 ${f}:`, err)
+      }
+    }
+    return icons
+  })
+
+  /** 列出用户图标目录（data/icons/lists）中的图标，供清单图标选择 */
+  ipcMain.handle(IpcChannels.listsListCustomIcons, () => {
+    if (!existsSync(listIconsDir)) return []
+    const imageExt = /\.(png|jpg|jpeg|webp|gif|svg|ico)$/i
+    const results: { name: string; dataUrl: string }[] = []
+    for (const f of readdirSync(listIconsDir)) {
+      if (!imageExt.test(f)) continue
+      try {
+        const buf = readFileSync(join(listIconsDir, f))
+        const ext = f.split('.').pop()?.toLowerCase() ?? 'png'
+        const mime = ext === 'svg' ? 'image/svg+xml' : ext === 'ico' ? 'image/x-icon' : `image/${ext === 'jpg' ? 'jpeg' : ext}`
+        results.push({ name: f, dataUrl: `data:${mime};base64,${buf.toString('base64')}` })
+      } catch (err) {
+        console.error(`[lists] 读取图标失败 ${f}:`, err)
+      }
+    }
+    return results
   })
 
   ipcMain.handle(IpcChannels.tagsGetAll, () => tags.getAll())
@@ -147,6 +176,7 @@ export function registerIpcHandlers(repos: Repositories): void {
 
   // ── Settings ──
   ipcMain.handle(IpcChannels.settingsGetAll, () => settings.getAll())
+  ipcMain.handle(IpcChannels.settingsGet, (_e, key: string) => settings.get(key)?.value ?? null)
   ipcMain.handle(IpcChannels.settingsUpdate, (_e, key: string, value: string) =>
     settings.set(key, value),
   )

@@ -18,6 +18,8 @@ interface PomodoroState {
   durationMinutes: number
   totalSeconds: number
   remainingSeconds: number
+  // 用户是否手动设定过时长（用于切换视图后保持记忆）
+  durationTouched: boolean
   selectedTaskId: string | null
   todayRecords: PomodoroRecord[]
   historyRecords: PomodoroRecord[]
@@ -74,6 +76,7 @@ export const usePomodoroStore = create<PomodoroState>()((set, get) => ({
   durationMinutes: 25,
   totalSeconds: 25 * 60,
   remainingSeconds: 25 * 60,
+  durationTouched: false,
   selectedTaskId: null,
   todayRecords: [],
   historyRecords: [],
@@ -84,8 +87,15 @@ export const usePomodoroStore = create<PomodoroState>()((set, get) => ({
   stopwatchElapsed: 0,
 
   async init() {
-    const settingsDuration = useSettingsStore.getState().pomodoroWorkDuration
-    const minutes = Number.isFinite(settingsDuration) && settingsDuration > 0 ? settingsDuration : 25
+    // 从数据库读取上次设定的时长（不依赖 settings store 的异步加载时序，保证重启后能恢复）
+    let minutes = 25
+    try {
+      const saved = await api.getSetting('pomodoroWorkDuration')
+      const n = saved === null ? NaN : Number(saved)
+      minutes = Number.isFinite(n) && n > 0 ? n : 25
+    } catch {
+      // 读取失败使用默认值
+    }
     const [records, stats, history] = await Promise.all([
       api.getTodayPomodoroRecords(),
       api.getTotalPomodoroStats(),
@@ -96,10 +106,10 @@ export const usePomodoroStore = create<PomodoroState>()((set, get) => ({
       totalStats: stats,
       historyRecords: history,
     })
-    // 仅当计时器处于未启动的初始状态时才应用设置时长；
-    // 避免切换到其他功能再切回时，init() 重置正在倒计时/暂停中的剩余时间
-    const { isRunning, remainingSeconds, totalSeconds } = get()
-    if (!isRunning && remainingSeconds === totalSeconds) {
+    // 仅当用户从未手动设定时长、且计时器处于未启动的初始状态时才应用设置时长；
+    // 避免切换视图再切回时，覆盖用户上次设定的时长或重置正在倒计时/暂停中的剩余时间
+    const { isRunning, remainingSeconds, totalSeconds, durationTouched } = get()
+    if (!isRunning && !durationTouched && remainingSeconds === totalSeconds) {
       set({
         durationMinutes: minutes,
         totalSeconds: minutes * 60,
@@ -142,7 +152,10 @@ export const usePomodoroStore = create<PomodoroState>()((set, get) => ({
       totalSeconds: valid * 60,
       remainingSeconds: valid * 60,
       lastCompletedAt: null,
+      durationTouched: true,
     })
+    // 持久化上次设定的时长，软件重启后自动恢复
+    void useSettingsStore.getState().setPomodoroWorkDuration(valid)
   },
 
   setSelectedTaskId(taskId) {

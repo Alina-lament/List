@@ -3,7 +3,6 @@ out/
 dist/
 !public/vditor/dist/
 !public/vditor/dist/**
-build/
 *.local
 .DS_Store
 
@@ -14,3 +13,9 @@ build/
 
 # Claude Code 本地配置
 .claude/
+
+# 工具/编辑器本地文件
+.dbg/
+.trae/
+.zcode/
+Snipaste_*.png
