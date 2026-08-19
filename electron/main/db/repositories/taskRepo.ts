@@ -14,6 +14,7 @@ export interface TaskRepository {
   getByDateRange(start: string, end: string): TasksByRangeResult
   getByList(listId: string): Task[]
   getById(id: string): Task | undefined
+  getByParentTaskId(parentId: string): Task[]
   create(input: CreateTaskInput): Task
   update(id: string, patch: UpdateTaskInput): Task
   updateDueDate(id: string, dueDate: string | null): void
@@ -59,6 +60,12 @@ export function createTaskRepository(db: AppDatabase): TaskRepository {
 
   return {
     getById,
+
+    getByParentTaskId(parentId) {
+      return db
+        .prepare(`SELECT ${TASK_COLUMNS} FROM tasks WHERE parent_task_id = ? ORDER BY sort_order`)
+        .all(parentId) as Task[]
+    },
 
     getByDateRange(start, end) {
       const nonRecurring = db

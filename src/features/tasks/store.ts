@@ -68,7 +68,48 @@ function playTaskCompleteSound(): void {
   })
 }
 
-export const useTasksStore = create<TasksState>()((set, get) => ({
+export const useTasksStore = create<TasksState>()((set, get) => {
+  /**
+   * 长期任务联动（UI 同步）：子任务完成态/日期变化后，把主进程持久化的
+   * 父任务自动完成、区间自动延长结果镜像到本地状态，避免界面显示旧数据
+   */
+  function syncParentToState(childId: string): void {
+    const s = get()
+    let child: Task | undefined
+    let listTasks: Task[] = []
+    for (const arr of Object.values(s.tasksByList)) {
+      const found = arr.find((t) => t.id === childId)
+      if (found) {
+        child = found
+        listTasks = arr
+        break
+      }
+    }
+    if (!child?.parent_task_id) return
+    const parent = listTasks.find((t) => t.id === child.parent_task_id)
+    if (!parent) return
+    const siblings = listTasks.filter((t) => t.parent_task_id === parent.id)
+    if (siblings.length === 0) return
+
+    const patch: { is_completed?: 0 | 1; start_date?: string; end_date?: string } = {}
+    const allDone = siblings.every((t) => t.is_completed === 1)
+    if (allDone && parent.is_completed === 0) patch.is_completed = 1
+    else if (!allDone && parent.is_completed === 1) patch.is_completed = 0
+    if (child.due_date && parent.start_date && parent.end_date) {
+      if (child.due_date > parent.end_date) patch.end_date = child.due_date
+      if (child.due_date < parent.start_date) patch.start_date = child.due_date
+    }
+    if (Object.keys(patch).length === 0) return
+
+    set(() => ({
+      tasksByList: {
+        ...s.tasksByList,
+        [child!.list_id]: listTasks.map((t) => (t.id === parent.id ? { ...t, ...patch } : t)),
+      },
+    }))
+  }
+
+  return {
   lists: [],
   tags: [],
   taskTags: {},
@@ -257,6 +298,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         },
         taskTags: input.tag_ids ? { ...s.taskTags, [task.id]: input.tag_ids } : s.taskTags,
       }))
+      // 长期任务：子任务日期超出父任务区间时主进程已自动延长，同步到 UI
+      if (input.parent_task_id) syncParentToState(task.id)
       return task
     } catch (e) {
       set((s) => ({
@@ -286,6 +329,9 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
         taskTags: patch.tag_ids ? { ...s.taskTags, [id]: patch.tag_ids } : s.taskTags,
       }
     })
+    if (task.parent_task_id && (patch.due_date !== undefined || patch.is_completed !== undefined)) {
+      syncParentToState(task.id)
+    }
   },
 
   async toggleTask(task) {
@@ -305,6 +351,8 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
     }
     try {
       await api.setTaskCompleted(task.id, completed)
+      // 长期任务：全部子任务完成时主进程已自动完成父任务，同步到 UI
+      if (task.parent_task_id) syncParentToState(task.id)
     } catch (e) {
       set((s) => ({
         tasksByList: {
@@ -335,13 +383,22 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
 
   async updateTaskDueDate(id, dueDate) {
     await api.updateTaskDueDate(id, dueDate)
+    let parentId: string | null = null
     set((s) => {
       const tasksByList = { ...s.tasksByList }
       for (const key of Object.keys(tasksByList)) {
-        tasksByList[key] = tasksByList[key].map((t) => (t.id === id ? { ...t, due_date: dueDate } : t))
+        tasksByList[key] = tasksByList[key].map((t) => {
+          if (t.id === id) {
+            parentId = t.parent_task_id
+            return { ...t, due_date: dueDate }
+          }
+          return t
+        })
       }
       return { tasksByList }
     })
+    // 长期任务：子任务日期超出父任务区间时主进程已自动延长，同步到 UI
+    if (parentId) syncParentToState(id)
   },
 
   reorderTasksLocal(listId, taskIds) {
@@ -459,4 +516,5 @@ export const useTasksStore = create<TasksState>()((set, get) => ({
   getPendingListId() {
     return get().lists.find((l) => l.name === '待定')?.id ?? null
   },
-}))
+  }
+})

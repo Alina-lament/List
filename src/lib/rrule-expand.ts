@@ -1,6 +1,6 @@
 import { RRule } from 'rrule'
 import type { List, Tag, Task, TaskException, TasksByRangeResult, TaskTag } from '@shared/types'
-import type { CalendarTaskInstance } from '@/types/calendar'
+import type { CalendarChildNode, CalendarTaskInstance } from '@/types/calendar'
 import { pad2 } from './date-utils'
 
 /** 'YYYY-MM-DD' → UTC Date（避免本地时区导致 rrule 展开偏移） */
@@ -26,6 +26,7 @@ function buildInstance(
   override?: TaskException,
   rangeStart: string | null = null,
   rangeEnd: string | null = null,
+  childInfo?: { total: number; done: number; nodes: CalendarChildNode[] },
 ): CalendarTaskInstance {
   return {
     instance_id: isRecurringInstance ? `${task.id}|${date}` : task.id,
@@ -44,6 +45,9 @@ function buildInstance(
     is_range_instance: rangeStart !== null && rangeEnd !== null,
     range_start: rangeStart,
     range_end: rangeEnd,
+    child_total: childInfo?.total,
+    child_completed: childInfo?.done,
+    child_nodes: childInfo?.nodes,
   }
 }
 
@@ -102,7 +106,36 @@ export function expandInstances(
   const rangeStart = utcDate(start)
   const rangeEnd = new Date(utcDate(end).getTime() + 24 * 60 * 60 * 1000 - 1)
 
+  // 长期任务：父任务为时间段任务时，子任务不独立生成实例，而是挂到父任务轨道上按天渲染节点
+  const tasksById = new Map(data.nonRecurring.map((t) => [t.id, t]))
+  const childInfoByParent = new Map<string, { total: number; done: number; nodesByDate: Map<string, CalendarChildNode[]> }>()
   for (const task of data.nonRecurring) {
+    if (!task.parent_task_id) continue
+    const parent = tasksById.get(task.parent_task_id)
+    if (!parent?.start_date || !parent.end_date) continue
+    let info = childInfoByParent.get(task.parent_task_id)
+    if (!info) {
+      info = { total: 0, done: 0, nodesByDate: new Map() }
+      childInfoByParent.set(task.parent_task_id, info)
+    }
+    info.total += 1
+    if (task.is_completed) info.done += 1
+    if (!task.due_date) continue
+    const node: CalendarChildNode = {
+      task_id: task.id,
+      title: task.title,
+      is_completed: Boolean(task.is_completed),
+      due_time: task.due_time,
+    }
+    const arr = info.nodesByDate.get(task.due_date) ?? []
+    arr.push(node)
+    info.nodesByDate.set(task.due_date, arr)
+  }
+
+  for (const task of data.nonRecurring) {
+    // 长期任务的子任务已作为父任务轨道上的节点
+    if (task.parent_task_id && childInfoByParent.has(task.parent_task_id)) continue
+
     // 优先按 start_date/end_date 展开为日期范围
     if (task.start_date && task.end_date) {
       const taskStart = utcDate(task.start_date)
@@ -111,12 +144,16 @@ export function expandInstances(
       const effectiveEnd = taskEnd > rangeEnd ? rangeEnd : taskEnd
       if (effectiveStart > effectiveEnd) continue
 
+      const childInfo = childInfoByParent.get(task.id)
       const d = new Date(effectiveStart.getTime())
       while (d <= effectiveEnd) {
         const key = toKey(d)
         const ex = exceptions.get(exceptionKey(task.id, key))
         if (ex?.action !== 'deleted') {
-          push(buildInstance(task, key, false, listsById, tagsByTask, ex, task.start_date, task.end_date))
+          push(buildInstance(
+            task, key, false, listsById, tagsByTask, ex, task.start_date, task.end_date,
+            childInfo ? { total: childInfo.total, done: childInfo.done, nodes: childInfo.nodesByDate.get(key) ?? [] } : undefined,
+          ))
         }
         d.setUTCDate(d.getUTCDate() + 1)
       }

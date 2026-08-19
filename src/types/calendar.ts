@@ -17,4 +17,17 @@ export interface CalendarTaskInstance {
   is_range_instance: boolean
   range_start: string | null
   range_end: string | null
+  /** 长期任务（时间段型父任务）的子任务总数 */
+  child_total?: number
+  /** 已完成的子任务数 */
+  child_completed?: number
+  /** 当天到期的子任务节点 */
+  child_nodes?: CalendarChildNode[]
+}
+
+export interface CalendarChildNode {
+  task_id: string
+  title: string
+  is_completed: boolean
+  due_time: string | null
 }

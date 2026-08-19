@@ -12,6 +12,7 @@ interface Props {
   month: number
   instances: CalendarTaskInstance[]
   onEditInstance: (instance: CalendarTaskInstance) => void
+  onEditNode?: (taskId: string) => void
   onCreateAt: (date: string) => void
   onSelectWeek?: () => void
   isWeekSelected?: boolean
@@ -25,6 +26,7 @@ export const CalendarCell = memo(function CalendarCell({
   month,
   instances,
   onEditInstance,
+  onEditNode,
   onCreateAt,
   onSelectWeek,
   isWeekSelected,
@@ -87,6 +89,7 @@ export const CalendarCell = memo(function CalendarCell({
               key={instance.instance_id}
               instance={instance}
               onEdit={onEditInstance}
+              onEditNode={onEditNode}
             />
           ))}
           {hiddenCount > 0 && (

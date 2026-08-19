@@ -111,6 +111,11 @@ export function CalendarView() {
     if (task) setDialog({ mode: 'edit', task })
   }
 
+  async function handleEditById(taskId: string) {
+    const task = await api.getTaskById(taskId)
+    if (task) setDialog({ mode: 'edit', task })
+  }
+
   function closeDialog() {
     setDialog(null)
     void fetchMonth()
@@ -211,6 +216,7 @@ export function CalendarView() {
                   month={month}
                   instances={filteredInstancesByDate[date] ?? []}
                   onEditInstance={handleEdit}
+                  onEditNode={handleEditById}
                   onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
                   onSelectWeek={() =>
                     setSelectedWeekStart(isSelected ? null : weekDays[0])
@@ -231,6 +237,7 @@ export function CalendarView() {
           weekDays={selectedWeekDays}
           instancesByDate={filteredInstancesByDate}
           onEditInstance={handleEdit}
+          onEditNode={handleEditById}
           onCreateAt={(d) => setDialog({ mode: 'create', date: d })}
         />
       )}
@@ -250,11 +257,13 @@ function WeekDetail({
   weekDays,
   instancesByDate,
   onEditInstance,
+  onEditNode,
   onCreateAt,
 }: {
   weekDays: string[]
   instancesByDate: Record<string, CalendarTaskInstance[]>
   onEditInstance: (instance: CalendarTaskInstance) => void
+  onEditNode: (taskId: string) => void
   onCreateAt: (date: string) => void
 }) {
   const weekNum = getISOWeekNumber(weekDays[0])
@@ -306,6 +315,7 @@ function WeekDetail({
                       key={instance.instance_id}
                       instance={instance}
                       onEdit={onEditInstance}
+                      onEditNode={onEditNode}
                     />
                   ))
                 )}

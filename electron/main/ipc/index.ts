@@ -40,19 +40,54 @@ export function registerIpcHandlers(repos: Repositories): void {
   )
   ipcMain.handle(IpcChannels.tasksGetByList, (_e, listId: string) => tasks.getByList(listId))
   ipcMain.handle(IpcChannels.tasksGetById, (_e, id: string) => tasks.getById(id) ?? null)
-  ipcMain.handle(IpcChannels.tasksCreate, (_e, input: CreateTaskInput) => tasks.create(input))
-  ipcMain.handle(IpcChannels.tasksUpdate, (_e, id: string, patch: UpdateTaskInput) =>
-    tasks.update(id, patch),
-  )
-  ipcMain.handle(IpcChannels.tasksUpdateDueDate, (_e, id: string, dueDate: string | null) =>
-    tasks.updateDueDate(id, dueDate),
-  )
+
+  /** 长期任务联动：子任务全部完成时父任务自动完成，反之回退父任务完成态 */
+  function syncParentCompletion(taskId: string): void {
+    const task = tasks.getById(taskId)
+    if (!task?.parent_task_id) return
+    const parent = tasks.getById(task.parent_task_id)
+    if (!parent) return
+    const siblings = tasks.getByParentTaskId(parent.id)
+    if (siblings.length === 0) return
+    const allDone = siblings.every((s) => s.is_completed === 1)
+    if (allDone && parent.is_completed === 0) tasks.setCompleted(parent.id, true)
+    else if (!allDone && parent.is_completed === 1) tasks.setCompleted(parent.id, false)
+  }
+
+  /** 子任务日期超出时间段型父任务的规划区间时，自动延长父任务区间 */
+  function expandParentRange(taskId: string): void {
+    const task = tasks.getById(taskId)
+    if (!task?.parent_task_id || !task.due_date) return
+    const parent = tasks.getById(task.parent_task_id)
+    if (!parent?.start_date || !parent.end_date) return
+    const patch: { start_date?: string; end_date?: string } = {}
+    if (task.due_date > parent.end_date) patch.end_date = task.due_date
+    if (task.due_date < parent.start_date) patch.start_date = task.due_date
+    if (patch.start_date || patch.end_date) tasks.update(parent.id, patch)
+  }
+
+  ipcMain.handle(IpcChannels.tasksCreate, (_e, input: CreateTaskInput) => {
+    const task = tasks.create(input)
+    expandParentRange(task.id)
+    return task
+  })
+  ipcMain.handle(IpcChannels.tasksUpdate, (_e, id: string, patch: UpdateTaskInput) => {
+    const task = tasks.update(id, patch)
+    if (patch.due_date !== undefined) expandParentRange(id)
+    if (patch.is_completed !== undefined) syncParentCompletion(id)
+    return task
+  })
+  ipcMain.handle(IpcChannels.tasksUpdateDueDate, (_e, id: string, dueDate: string | null) => {
+    tasks.updateDueDate(id, dueDate)
+    if (dueDate) expandParentRange(id)
+  })
   ipcMain.handle(IpcChannels.tasksReorder, (_e, listId: string, taskIds: string[]) =>
     tasks.reorder(listId, taskIds),
   )
-  ipcMain.handle(IpcChannels.tasksSetCompleted, (_e, id: string, completed: boolean) =>
-    tasks.setCompleted(id, completed),
-  )
+  ipcMain.handle(IpcChannels.tasksSetCompleted, (_e, id: string, completed: boolean) => {
+    tasks.setCompleted(id, completed)
+    syncParentCompletion(id)
+  })
   ipcMain.handle(IpcChannels.tasksDelete, (_e, id: string) => tasks.remove(id))
   ipcMain.handle(IpcChannels.tasksCreateException, (_e, input: CreateExceptionInput) =>
     tasks.createException(input),

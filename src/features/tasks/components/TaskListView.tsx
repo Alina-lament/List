@@ -165,7 +165,11 @@ export function TaskListView() {
     const upcoming: Task[] = []
     const overdue: Task[] = []
     for (const t of active) {
-      if (t.parent_task_id) continue // 子任务不独立显示
+      if (t.parent_task_id) {
+        // 今日视图：当天到期的子任务独立成行并显示父任务归属；其余视图子任务在父任务下方显示
+        if (isTodayView && t.due_date === today) todayList.push(t)
+        continue
+      }
       if (t.due_date === today) {
         todayList.push(t)
       } else if (t.due_date && t.due_date < today) {
@@ -178,8 +182,8 @@ export function TaskListView() {
   }, [active, today])
 
   const todayCompleted = useMemo(
-    () => completed.filter((t) => t.due_date === today && !t.parent_task_id),
-    [completed, today],
+    () => completed.filter((t) => t.due_date === today && (!t.parent_task_id || isTodayView)),
+    [completed, today, isTodayView],
   )
 
   // 子任务按父任务分组（包含已完成子任务，避免折叠后显示不全）
@@ -188,6 +192,41 @@ export function TaskListView() {
     for (const t of tasks) {
       if (t.parent_task_id) {
         (map[t.parent_task_id] ??= []).push(t)
+      }
+    }
+    return map
+  }, [tasks])
+
+  // 长期任务进度与"下一项"（按日期升序的最早未完成子任务）
+  const progressByParent = useMemo(() => {
+    const map: Record<string, { done: number; total: number; undatedPending: number; next?: { date: string; title: string } }> = {}
+    for (const [parentId, subs] of Object.entries(subtasksByParent)) {
+      let done = 0
+      let undatedPending = 0
+      for (const s of subs) {
+        if (s.is_completed) done++
+        else if (!s.due_date) undatedPending++
+      }
+      const pending = subs
+        .filter((s) => !s.is_completed && s.due_date)
+        .sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''))
+      map[parentId] = {
+        done,
+        total: subs.length,
+        undatedPending,
+        next: pending[0] ? { date: pending[0].due_date!, title: pending[0].title } : undefined,
+      }
+    }
+    return map
+  }, [subtasksByParent])
+
+  // 子任务 ID → 父任务标题（今日视图中子任务独立成行时显示归属）
+  const parentTitleById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const t of tasks) {
+      if (t.parent_task_id && !map[t.parent_task_id]) {
+        const parent = tasks.find((p) => p.id === t.parent_task_id)
+        if (parent) map[t.parent_task_id] = parent.title
       }
     }
     return map
@@ -302,6 +341,8 @@ export function TaskListView() {
   // 传递给 TaskItem 的通用 props 工厂
   function taskItemProps(task: Task, extra?: { variant?: 'default' | 'overdue'; isSubtask?: boolean; sortable?: boolean }) {
     const hasSubtasks = !extra?.isSubtask && (subtasksByParent[task.id]?.length ?? 0) > 0
+    const progressInfo = hasSubtasks ? progressByParent[task.id] : undefined
+    const next = progressInfo?.next
     return {
       task,
       tagNames: tagNamesByTask[task.id] ?? [],
@@ -323,6 +364,18 @@ export function TaskListView() {
       hasSubtasks,
       subtasksExpanded: !collapsedParentTasks.has(task.id),
       onToggleSubtasks: hasSubtasks ? () => handleToggleParentTask(task.id) : undefined,
+      progress: progressInfo ? { done: progressInfo.done, total: progressInfo.total } : undefined,
+      subtaskSummary: hasSubtasks
+        ? next
+          ? `下一项 · ${next.date.slice(5)} ${next.title}`
+          : progressInfo && progressInfo.done >= progressInfo.total && progressInfo.total > 0
+            ? `全部 ${progressInfo.total} 项子任务已完成`
+            : progressInfo && progressInfo.undatedPending > 0
+              ? `${progressInfo.undatedPending} 项子任务待安排日期`
+              : undefined
+        : undefined,
+      // 今日视图中子任务独立成行时显示父任务归属
+      parentLabel: !extra?.isSubtask && task.parent_task_id ? parentTitleById[task.parent_task_id] : undefined,
     }
   }
 
@@ -337,8 +390,10 @@ export function TaskListView() {
   /** 渲染一条任务及其子任务 */
   function renderTaskWithSubtasks(task: Task, extra?: { variant?: 'default' | 'overdue'; sortable?: boolean }) {
     const subtasks = subtasksByParent[task.id] ?? []
-    const incompleteSubtasks = subtasks.filter((s) => !s.is_completed)
-    const completedSubtasks = subtasks.filter((s) => s.is_completed)
+    // 今日视图中当天到期的子任务已独立成行，父任务下方不再重复显示
+    const notStandaloneToday = (s: Task) => !(isTodayView && s.due_date === today)
+    const incompleteSubtasks = subtasks.filter((s) => !s.is_completed && notStandaloneToday(s))
+    const completedSubtasks = subtasks.filter((s) => s.is_completed && notStandaloneToday(s))
     const parentExpanded = !collapsedParentTasks.has(task.id)
     const completedExpanded = !collapsedCompletedSubtasks.has(task.id)
     const hasCompletedSubtasks = completedSubtasks.length > 0

@@ -67,6 +67,12 @@ interface TaskItemProps {
   subtasksExpanded?: boolean
   /** 切换子任务展开/折叠 */
   onToggleSubtasks?: () => void
+  /** 子任务进度（长期任务父任务行显示进度条与计数） */
+  progress?: { done: number; total: number }
+  /** 折叠态下显示的子任务摘要（如"下一项 · 08-20 第三章习题"） */
+  subtaskSummary?: string
+  /** 父任务名称（今日视图中子任务独立成行时显示归属） */
+  parentLabel?: string
 }
 
 export const TaskItem = memo(function TaskItem({
@@ -87,6 +93,9 @@ export const TaskItem = memo(function TaskItem({
   hasSubtasks = false,
   subtasksExpanded = true,
   onToggleSubtasks,
+  progress,
+  subtaskSummary,
+  parentLabel,
 }: TaskItemProps) {
   const [draftTitle, setDraftTitle] = useState(task.title)
   const [selfEditing, setSelfEditing] = useState(false)
@@ -238,6 +247,17 @@ export const TaskItem = memo(function TaskItem({
             <span className="truncate">{list.name}</span>
           </div>
         )}
+        {parentLabel && (
+          <div className="mt-0.5 flex items-center gap-1 text-xs text-ink-3">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <path d="M4 6h16M4 12h10M4 18h13" strokeLinecap="round" />
+            </svg>
+            <span className="truncate">{parentLabel}</span>
+          </div>
+        )}
+        {subtaskSummary && hasSubtasks && !subtasksExpanded && (
+          <span className="mt-0.5 truncate text-xs text-ink-3">{subtaskSummary}</span>
+        )}
       </div>
 
       {task.is_recurring === 1 && <RecurrenceIcon />}
@@ -246,7 +266,24 @@ export const TaskItem = memo(function TaskItem({
           {name}
         </span>
       ))}
-      {task.due_date && (
+      {progress && progress.total > 0 && (
+        <span className="flex shrink-0 items-center gap-1.5" title={`子任务进度 ${progress.done}/${progress.total}`}>
+          <span className="h-1.5 w-14 overflow-hidden rounded-full bg-canvas-2 ring-1 ring-inset ring-canvas-3/50">
+            <span
+              className="block h-full rounded-full bg-royal transition-all duration-300"
+              style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+            />
+          </span>
+          <span className="text-[10px] font-medium tabular-nums text-ink-3">
+            {progress.done}/{progress.total}
+          </span>
+        </span>
+      )}
+      {task.start_date && task.end_date ? (
+        <span className="shrink-0 text-xs text-ink-3" title={`${task.start_date} — ${task.end_date}`}>
+          {task.start_date.slice(5)} – {task.end_date.slice(5)}
+        </span>
+      ) : task.due_date ? (
         <span
           className={`shrink-0 text-xs ${
             isOverdue ? 'font-semibold text-prihigh' : isToday ? 'font-semibold text-royal' : 'text-ink-3'
@@ -255,7 +292,7 @@ export const TaskItem = memo(function TaskItem({
           {isToday ? '今天' : task.due_date.slice(5)}
           {task.due_time ? ` ${task.due_time}` : ''}
         </span>
-      )}
+      ) : null}
       {pomodoroStats && pomodoroStats.count > 0 && (
         <span
           className="shrink-0 inline-flex items-center gap-0.5 rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600"
